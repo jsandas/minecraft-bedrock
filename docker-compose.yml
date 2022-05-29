@@ -1,0 +1,17 @@
+version: '3'
+services:
+  server:
+    build:
+      context: .
+    image: minecraft:latest
+    environment:
+      CFG_SERVER_NAME: test_server
+      CFG_GAMEMODE: creative
+      CFG_LEVEL_NAME: test_server
+    ports:
+      - '19132:19132'
+      - '19132:19132/udp'
+    volumes:
+      - $PWD/worlds:/opt/minecraft/worlds
+    tty: true
+    stdin_open: true

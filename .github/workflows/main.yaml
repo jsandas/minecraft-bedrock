@@ -1,0 +1,23 @@
+name: main
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    name: Docker Build, Tag, Push
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Build image
+        run: docker build --tag ghcr.io/jsandas/minecraft-bedrock .
+
+      - name: Log into registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io/jsandas -u ${{ github.actor }} --password-stdin
+
+      - name: Push image
+        run: docker push ghcr.io/jsandas/minecraft-bedrock 
