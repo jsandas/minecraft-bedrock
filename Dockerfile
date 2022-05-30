@@ -1,4 +1,4 @@
-FROM ubuntu:impish
+FROM python:slim
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV APP_DIR=/opt/minecraft
@@ -8,6 +8,8 @@ RUN useradd -d ${APP_DIR} -s /bin/bash minecraft
 RUN apt update && apt upgrade -y \
     && apt install -y curl unzip \
     && rm -rf /var/lib/apt/lists/*
+
+RUN pip install mcstatus
 
 WORKDIR ${APP_DIR}
 
