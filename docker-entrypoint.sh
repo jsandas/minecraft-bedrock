@@ -20,7 +20,7 @@ if [[ ! -d $MINECRAFT_VER ]]; then
     echo "Installing minecraft version: $MINECRAFT_VER"
 
     # Download and decompress archive
-    curl -s -O $DOWNLOAD_URL
+    curl -O $DOWNLOAD_URL
     unzip -qq bedrock-server-$MINECRAFT_VER.zip
     rm bedrock-server-$MINECRAFT_VER.zip
 fi
