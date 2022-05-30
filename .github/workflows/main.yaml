@@ -25,4 +25,4 @@ jobs:
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io/jsandas -u ${{ github.actor }} --password-stdin
 
       - name: Push image
-        run: docker push ghcr.io/jsandas/minecraft-bedrock 
+        run: docker push --all-tags ghcr.io/jsandas/minecraft-bedrock 
