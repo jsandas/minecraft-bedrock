@@ -1,7 +1,13 @@
 # get mcutils binary
-FROM golang as mcutils
+FROM golang as go-builder
 
-RUN go install github.com/xrjr/mcutils/cmd/mcutils@latest
+RUN git clone https://github.com/itzg/mc-monitor.git /go/src
+
+WORKDIR /go/src
+
+RUN go mod download
+
+RUN GOBIN=/go/bin CGO_ENABLED=0 go install
 
 # get minecraft bedrock server
 FROM debian:bullseye as build
@@ -36,7 +42,7 @@ RUN useradd -m -d ${APP_DIR} -s /bin/bash minecraft \
 
 WORKDIR ${APP_DIR}
 
-COPY --from=mcutils /go/bin/mcutils /usr/local/bin/mcutils
+COPY --from=go-builder /go/bin/mc-monitor /usr/local/bin/mc-monitor
 COPY --from=build /build ${APP_DIR}
 
 COPY docker-entrypoint.sh ${APP_DIR}/docker-entrypoint.sh
