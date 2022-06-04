@@ -19,7 +19,7 @@ jobs:
           echo "MC_VER=$(curl -s -H "accept-language:*" -H "User-Agent: Mozilla/5.0" https://www.minecraft.net/en-us/download/server/bedrock | grep serverBedrockLinux | grep -o -P '(?<=bedrock-server-).*(?=.zip)')" >> $GITHUB_ENV
 
       - name: Build and Tag
-        run: docker build -t ghcr.io/jsandas/minecraft-bedrock -t ghcr.io/jsandas/minecraft-bedrock:1.18.33.02 --build-arg "1.18.33.02" .
+        run: docker build -t ghcr.io/jsandas/minecraft-bedrock -t ghcr.io/jsandas/minecraft-bedrock:${{ env.MC_VER }} --build-arg "${{ env.MC_VER }}" .
 
       - name: Log into registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io/jsandas -u ${{ github.actor }} --password-stdin
