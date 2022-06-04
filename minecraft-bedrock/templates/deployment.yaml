@@ -1,0 +1,80 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "minecraft-bedrock.fullname" . }}
+  labels:
+    {{- include "minecraft-bedrock.labels" . | nindent 4 }}
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "minecraft-bedrock.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "minecraft-bedrock.selectorLabels" . | nindent 8 }}
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "minecraft-bedrock.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          tty: true
+          env:
+          {{- range $k, $v := .Values.minecraft.config }}
+          - name: CFG_{{ $k }}
+            value: {{ $v | quote }}
+          {{- end }}
+          ports:
+            - name: minecraft-tcp
+              containerPort: 19132
+              protocol: TCP
+            - name: minecraft-udp
+              containerPort: 19132
+              protocol: UDP
+          livenessProbe:
+            exec:
+              command:
+                - mc-monitor 
+                - status-bedrock 
+                - --host
+                - 127.0.0.1 
+            initialDelaySeconds: 60
+            periodSeconds: 30
+          # readinessProbe:
+          #   exec:
+          #     command:
+          #       - mc-monitor 
+          #       - status-bedrock 
+          #       - --host
+          #       - 127.0.0.1 
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
