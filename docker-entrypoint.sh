@@ -14,7 +14,17 @@ function config() {
     done
 }
 
+if [[ $EULA_ACCEPT != 'true' ]]; then
+    echo " Please accept the Minecraft EULA and Microsoft Privacy Policy"
+    echo " with env var EULA_ACCEPT=true"
+    echo " Links:"
+    echo "   https://www.minecraft.net/en-us/terms"
+    echo "   https://privacy.microsoft.com/en-us/privacystatement"
+    echo
+    exit 1
+fi
+
 config
 
-echo "Starting minecraft server version: $(cat $APP_DIR/version)..."
+echo "Starting minecraft server..."
 LD_LIBRARY_PATH=. ./bedrock_server
