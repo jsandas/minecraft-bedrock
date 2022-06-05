@@ -23,3 +23,14 @@ Stopping the server that is running in background:
 
 To remove the container that you have created (the data folder will not be deleted, it must be stopped)
 `docker rm minecraft-server`
+
+**Kubernetes**
+
+Install:
+```
+helm upgrade --install <release_name> ./minecraft-bedrock -f <values_file> -n <namespace> --create-namespace
+```
+Example:
+```
+helm upgrade --install minecraft-bedrock ./minecraft-bedrock -f values.yaml -n minecraft --create-namespace
+```
