@@ -1,4 +1,4 @@
-name: main
+name: Releases
 
 on:
   push:
@@ -26,3 +26,20 @@ jobs:
 
       - name: Push image
         run: docker push --all-tags ghcr.io/jsandas/minecraft-bedrock 
+
+      - name: Chart version
+        run: sed -i 's/appVersion:.*/appVersion: "$MC_VER"/g' chart/minecraft-bedrock/Chart.yaml
+
+      - name: Configure Git
+        run: |
+          git config user.name "$GITHUB_ACTOR"
+          git config user.email "$GITHUB_ACTOR@users.noreply.github.com"
+
+      - name: Run chart-releaser
+        uses: helm/chart-releaser-action@v1.4.0
+        with:
+          charts_dir: chart
+          config: cr.yaml
+          charts_repo_url: https://jsandas.github.io/minecraft-k8s
+        env:
+          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
