@@ -27,8 +27,8 @@ jobs:
       - name: Push image
         run: docker push --all-tags ghcr.io/jsandas/minecraft-bedrock 
 
-      - name: Chart version
-        run: sed -i 's/appVersion:.*/appVersion: "$MC_VER"/g' chart/minecraft-bedrock/Chart.yaml
+      - name: appVersion Update
+        run: "sed -i 's/appVersion:.*/appVersion: \"$MC_VER\"/g' chart/minecraft-bedrock/Chart.yaml"
 
       - name: Configure Git
         run: |
