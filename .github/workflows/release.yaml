@@ -40,6 +40,6 @@ jobs:
         with:
           charts_dir: chart
           config: cr.yaml
-          charts_repo_url: https://jsandas.github.io/minecraft-k8s
+          charts_repo_url: https://jsandas.github.io/minecraft-bedrock
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
