@@ -34,7 +34,7 @@ spec:
           tty: true
           env:
             - name: EULA_ACCEPT
-              value: {{ .Values.minecraft.env.EULA_ACCEPT }}
+              value: {{ .Values.minecraft.env.EULA_ACCEPT | quote }}
             {{- range $k, $v := .Values.minecraft.config }}
             - name: CFG_{{ $k }}
               value: {{ $v | quote }}

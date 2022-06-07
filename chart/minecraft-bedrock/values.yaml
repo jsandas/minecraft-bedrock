@@ -67,6 +67,8 @@ affinity: {}
 # while upper-case is optional for keys. Example: server-name = SERVER_NAME
 # Config values cannot have space as they will not be set properly in the properties file
 minecraft:
+  env:
+    EULA_ACCEPT: "false"
   config:
     SERVER_NAME: test_server
     GAMEMODE: creative
