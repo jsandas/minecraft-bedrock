@@ -33,10 +33,12 @@ spec:
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           tty: true
           env:
-          {{- range $k, $v := .Values.minecraft.config }}
-          - name: CFG_{{ $k }}
-            value: {{ $v | quote }}
-          {{- end }}
+            - name: EULA_ACCEPT
+              value: {{ .Values.minecraft.env.EULA_ACCEPT }}
+            {{- range $k, $v := .Values.minecraft.config }}
+            - name: CFG_{{ $k }}
+              value: {{ $v | quote }}
+            {{- end }}
           ports:
             - name: minecraft-tcp
               containerPort: 19132
