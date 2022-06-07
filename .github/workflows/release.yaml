@@ -17,6 +17,7 @@ jobs:
         id: set_mcver
         run: |
           echo "MC_VER=$(curl -s -H "accept-language:*" -H "User-Agent: Mozilla/5.0" https://www.minecraft.net/en-us/download/server/bedrock | grep serverBedrockLinux | grep -o -P '(?<=bedrock-server-).*(?=.zip)')" >> $GITHUB_ENV
+          echo "CHART_VERSION=$(cat chart/minecraft-bedrock/Chart.yaml | grep version: | awk '{print $2}')" >> $GITHUB_ENV
 
       - name: Build and Tag
         run: docker build -t ghcr.io/jsandas/minecraft-bedrock -t ghcr.io/jsandas/minecraft-bedrock:${{ env.MC_VER }} --build-arg "${{ env.MC_VER }}" .
@@ -28,10 +29,9 @@ jobs:
         run: docker push --all-tags ghcr.io/jsandas/minecraft-bedrock 
 
       - name: appVersion Update
-        run: "sed -i 's/appVersion:.*/appVersion: \"$MC_VER\"/g' chart/minecraft-bedrock/Chart.yaml"
+        run: "sed -i 's/appVersion:.*/appVersion: \"${{ env.MC_VER }}\"/g' chart/minecraft-bedrock/Chart.yaml"
 
       - name: Helm Package
         run: |
-          export CHART_VERSION=$(cat chart/minecraft-bedrock/Chart.yaml | grep version: | awk '{print $2}')
           helm package chart/minecraft-bedrock
-          helm push minecraft-bedrock-${CHART_VERSION}.tgz oci://ghcr.io/jsandas
+          helm push minecraft-bedrock-${{ env.CHART_VERSION }}.tgz oci://ghcr.io/jsandas
