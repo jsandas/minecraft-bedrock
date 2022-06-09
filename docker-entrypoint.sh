@@ -26,5 +26,8 @@ fi
 
 config
 
-echo "Starting minecraft server..."
-LD_LIBRARY_PATH=. ./bedrock_server
+if [[ "$@" == "" ]]
+    LD_LIBRARY_PATH=. ./bedrock-server
+fi
+
+$@
