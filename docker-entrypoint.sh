@@ -26,7 +26,7 @@ fi
 
 config
 
-if [[ "$@" == "" ]]
+if [[ "$@" == "" ]]; then
     LD_LIBRARY_PATH=. ./bedrock-server
 fi
 
