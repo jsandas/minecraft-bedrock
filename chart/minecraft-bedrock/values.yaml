@@ -45,6 +45,29 @@ service:
   # type: LoadBalancer
   # loadBalancerIP:
 
+## Enable persistence using Persistent Volume Claims
+## ref: http://kubernetes.io/docs/user-guide/persistent-volumes/
+##
+persistence:
+  enabled: false
+  annotations: {}
+  ## minecraft data Persistent Volume Storage Class
+  ## If defined, storageClassName: <storageClass>
+  ## If set to "-", storageClassName: "", which disables dynamic provisioning
+  ## If undefined (the default) or set to null, no storageClassName spec is
+  ##   set, choosing the default provisioner.  (gp2 on AWS, standard on
+  ##   GKE, AWS & OpenStack)
+  ##
+  # storageClass: "-"
+
+  ## A manually managed Persistent Volume and Claim
+  ## Requires persistence.enabled: true
+  ## If defined, PVC must be created manually before volume will be bound
+  # existingClaim:
+
+  accessMode: ReadWriteOnce
+  size: 8Gi
+
 resources: {}
   # We usually recommend not to specify default resources and to leave this as a conscious
   # choice for the user. This also increases chances charts run on environments with little
@@ -63,12 +86,17 @@ tolerations: []
 
 affinity: {}
 
-# Config keys match server.properties execept hyphens (-) need to be replaced with underscores (_) 
-# while upper-case is optional for keys. Example: server-name = SERVER_NAME
-# Config values cannot have space as they will not be set properly in the properties file
 minecraft:
+  # Environmental variables
   env:
-    EULA_ACCEPT: "false"
+    # Must accept the Minecraft EULA and Microsoft Privacy Policy"
+    # Links:"
+    #   https://www.minecraft.net/en-us/terms"
+    #   https://privacy.microsoft.com/en-us/privacystatement"
+    EULA_ACCEPT: "true"
+  # Config keys match server.properties execept hyphens (-) need to be replaced with underscores (_) 
+  # while upper-case is optional for keys. Example: server-name = SERVER_NAME
+  # Config values cannot have space as they will not be set properly in the properties file
   config:
     SERVER_NAME: test_server
     GAMEMODE: creative
