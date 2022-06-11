@@ -54,7 +54,7 @@ spec:
                 - --host
                 - 127.0.0.1
                 - --port
-                - {{ .Values.service.port }}
+                - "{{ .Values.service.port }}"
             initialDelaySeconds: 60
             periodSeconds: 30
           # readinessProbe:
