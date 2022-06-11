@@ -1,0 +1,15 @@
+name: Scheduled Job
+
+on:
+  schedule:
+    - cron: "15 23 * * *"
+
+jobs:
+  scheduled-job:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+        echo "MC_VER=$(curl -s -H "accept-language:*" -H "User-Agent: Mozilla/5.0" https://www.minecraft.net/en-us/download/server/bedrock | grep serverBedrockLinux | grep -o -P '(?<=bedrock-server-).*(?=.zip)')" >> $GITHUB_ENV
+        echo "CUR_VER=$(docker run ghcr.io/jsandas/minecraft-bedrock:latest cat version)" >> $GITHUB_ENV
+      - run: |
+        if [[ "{{ env.MC_VER }}" == "{{ env.CUR_VER }}" ]]; then 
