@@ -10,20 +10,20 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-        uses: action-owner/action-repo@ref
 
-      - name: Check MC version
-      - run: |
+      - name: Set Env Vars
+        run: |
         echo "MC_VER=$(curl -s -H "accept-language:*" -H "User-Agent: Mozilla/5.0" https://www.minecraft.net/en-us/download/server/bedrock | grep serverBedrockLinux | grep -o -P '(?<=bedrock-server-).*(?=.zip)')" >> $GITHUB_ENV
         echo "CUR_VER=$(docker run ghcr.io/jsandas/minecraft-bedrock:latest cat version)" >> $GITHUB_ENV
 
-      - name: Modifiy the specific files using action
-      - run: |
+      - name: Check MC Version
+        run: |
         if [[ "{{ env.MC_VER }}" == "{{ env.CUR_VER }}" ]]; then 
           sed -i 's/MC_VER=.*/MC_VER={{ env.MC_VER }}/g' Dockerfile
         fi
       
       - name: Commit and push changes
+        uses: action-owner/action-repo@ref
         run: |
           git diff --no-ext-diff --quiet --exit-code
           if [[ $? -eq 1 ]]; then
