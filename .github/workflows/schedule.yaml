@@ -14,11 +14,11 @@ jobs:
       - name: Set Env Vars
         run: |
         echo "MC_VER=$(curl -s -H "accept-language:*" -H "User-Agent: Mozilla/5.0" https://www.minecraft.net/en-us/download/server/bedrock | grep serverBedrockLinux | grep -o -P '(?<=bedrock-server-).*(?=.zip)')" >> $GITHUB_ENV
-        echo "CUR_VER=$(docker run ghcr.io/jsandas/minecraft-bedrock:latest cat version)" >> $GITHUB_ENV
+        echo "CUR_VER=$(docker run ghcr.io/jsandas/minecraft-bedrock cat version)" >> $GITHUB_ENV
 
       - name: Check MC Version
         run: |
-        if [[ "{{ env.MC_VER }}" == "{{ env.CUR_VER }}" ]]; then 
+        if [[ "{{ env.MC_VER }}" != "{{ env.CUR_VER }}" ]]; then 
           sed -i 's/MC_VER=.*/MC_VER={{ env.MC_VER }}/g' Dockerfile
         fi
       
