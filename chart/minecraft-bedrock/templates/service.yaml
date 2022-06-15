@@ -12,13 +12,6 @@ spec:
   ports:
     - port: {{ .Values.service.port }}
       targetPort: 19132
-      protocol: TCP
-      name: minecraft-tcp
-      {{- if eq .Values.service.type "NodePort" }}
-      nodePort: {{ default "" .Values.service.nodePort}}
-      {{- end }}
-    - port: {{ .Values.service.port }}
-      targetPort: 19132
       protocol: UDP
       name: minecraft-udp
       {{- if eq .Values.service.type "NodePort" }}

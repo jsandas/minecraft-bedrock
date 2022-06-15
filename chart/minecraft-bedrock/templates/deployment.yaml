@@ -41,9 +41,6 @@ spec:
               value: {{ $v | quote }}
             {{- end }}
           ports:
-            - name: minecraft-tcp
-              containerPort: {{ .Values.service.port }}
-              protocol: TCP
             - name: minecraft-udp
               containerPort: {{ .Values.service.port }}
               protocol: UDP
