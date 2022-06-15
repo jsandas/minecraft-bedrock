@@ -91,7 +91,7 @@ spec:
         {{- if .Values.persistence.existingClaim }}
             claimName: {{ .Values.persistence.existingClaim }}
         {{- else }}
-            claimName: {{ template "nextcloud.fullname" . }}-worlds
+            claimName: {{ template "minecraft-bedrock.fullname" . }}-worlds
         {{- end }}
       {{- else }}
           emptyDir: {}
