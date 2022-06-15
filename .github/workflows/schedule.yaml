@@ -2,7 +2,7 @@ name: Version Check
 
 on:
   schedule:
-    - cron: "7 */4 * * *"
+    - cron: "7 23 * * *"
 
 jobs:
   scheduled-job:
