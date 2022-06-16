@@ -27,7 +27,12 @@ fi
 config
 
 if [[ "$@" == "" ]]; then
-    LD_LIBRARY_PATH=. ./bedrock_server
+    export LD_LIBRARY_PATH=.
+    # create named pipe for streaming input from another shell
+    mkfifo input_pipe
+    # create file for streaming output to another shell
+    touch output_pipe
+    tail -f input_pipe | ./bedrock_server 2>&1 | tee output_pipe
 fi
 
-$@
+exec "$@"
