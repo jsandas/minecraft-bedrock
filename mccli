@@ -1,0 +1,10 @@
+#!/bin/bash
+
+while true
+do
+    echo -n > output_pipe
+    read line
+    echo $line > input_pipe
+    sleep 1
+    cat output_pipe
+done

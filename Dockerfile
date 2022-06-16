@@ -31,11 +31,13 @@ WORKDIR ${APP_DIR}
 
 COPY --from=itzg/mc-monitor /mc-monitor /usr/local/bin/mc-monitor
 COPY --from=build /build ${APP_DIR}
-COPY docker-entrypoint.sh ${APP_DIR}/docker-entrypoint.sh
+COPY docker-entrypoint.sh ${APP_DIR}
+COPY mccli ${APP_DIR}
 
 RUN chmod +x ${APP_DIR}/docker-entrypoint.sh \
+    && chmod +x ${APP_DIR}/mccli \
     && chown -R minecraft /opt/minecraft
 
 USER minecraft
 
-CMD ${APP_DIR}/docker-entrypoint.sh
+ENTRYPOINT ${APP_DIR}/docker-entrypoint.sh
