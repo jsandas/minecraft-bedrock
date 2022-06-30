@@ -40,4 +40,4 @@ RUN chmod +x ${APP_DIR}/docker-entrypoint.sh \
 
 USER minecraft
 
-ENTRYPOINT ${APP_DIR}/docker-entrypoint.sh
+ENTRYPOINT ["/opt/minecraft/docker-entrypoint.sh"]
