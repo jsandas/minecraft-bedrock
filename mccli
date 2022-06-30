@@ -2,6 +2,7 @@
 
 while true
 do
+    cat output_pipe
     echo -n > output_pipe
     read line
     echo $line > input_pipe
