@@ -14,19 +14,19 @@ function config() {
     done
 }
 
-if [[ $EULA_ACCEPT != 'true' ]]; then
-    echo " Please accept the Minecraft EULA and Microsoft Privacy Policy"
-    echo " with env var EULA_ACCEPT=true"
-    echo " Links:"
-    echo "   https://www.minecraft.net/en-us/terms"
-    echo "   https://privacy.microsoft.com/en-us/privacystatement"
-    echo
-    exit 1
-fi
-
 config
 
 if [[ "$@" == "" ]]; then
+    if [[ $EULA_ACCEPT != 'true' ]]; then
+        echo " Please accept the Minecraft EULA and Microsoft Privacy Policy"
+        echo " with env var EULA_ACCEPT=true"
+        echo " Links:"
+        echo "   https://www.minecraft.net/en-us/terms"
+        echo "   https://privacy.microsoft.com/en-us/privacystatement"
+        echo
+        exit 1
+    fi
+
     export LD_LIBRARY_PATH=.
     # create named pipe for streaming input from another shell
     mkfifo input_pipe
