@@ -34,3 +34,6 @@ Example install with specific namespace and custom values file:
 ```
 helm upgrade --install minecraft-bedrock oci://ghcr.io/jsandas/minecraft-bedrock -f custom-values.yaml -n minecraft --create-namespace
 ```
+
+Notes:
+Clients will need to be configured to connect to the server.  The server is unable to broadcast outside of the kubernetes network.

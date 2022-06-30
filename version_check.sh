@@ -18,5 +18,5 @@ if [[ $? -eq 1 ]]; then
 
     git add -A
     git commit -m "update mc version to $MC_VER}}"
-    git push
+    git push --force
 fi
