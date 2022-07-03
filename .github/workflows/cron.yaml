@@ -1,11 +1,8 @@
 name: Version Check
 
 on:
-  push:
-    branches:
-      - main
-  # schedule:
-  #   - cron: "* */2 * * *"
+  schedule:
+    - cron: "13 13 * * *"
 
 jobs:
   scheduled-job:
