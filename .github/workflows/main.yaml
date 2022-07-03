@@ -11,7 +11,7 @@ jobs:
     name: Docker Build, Tag, Push
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Set envvars
         id: set_mcver
