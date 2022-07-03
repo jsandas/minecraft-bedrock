@@ -1,8 +1,11 @@
 name: Version Check
 
 on:
-  schedule:
-    - cron: "* */2 * * *"
+  push:
+    branches:
+      - main
+  # schedule:
+  #   - cron: "* */2 * * *"
 
 jobs:
   scheduled-job:
@@ -19,6 +22,12 @@ jobs:
         with:
           app_id: ${{ secrets.APP_ID }}
           private_key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Use token
+        env:
+          TOKEN: ${{ steps.generate_token.outputs.token }}
+        run: |
+          echo "The generated token is masked: ${TOKEN}"
 
       - name: Create Pull Request
         id: cpr

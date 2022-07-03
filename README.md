@@ -1,4 +1,4 @@
-To execute the server using docker:
+**Docker**
 
 The first time: (it creates a docker container named minecraft-server, this command works only once)
 `docker-compose run --name minecraft-server server`
@@ -33,6 +33,11 @@ helm upgrade --install <release_name> oci://ghcr.io/jsandas/minecraft-bedrock
 Example install with specific namespace and custom values file:
 ```
 helm upgrade --install minecraft-bedrock oci://ghcr.io/jsandas/minecraft-bedrock -f custom-values.yaml -n minecraft --create-namespace
+```
+
+To managed minecraft server:
+```
+kubectl -n minecraft get pods | grep minecraft-bedrock
 ```
 
 Notes:
