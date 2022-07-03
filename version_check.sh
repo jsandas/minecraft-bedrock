@@ -9,14 +9,15 @@ if [[ "$MC_VER" != "$CUR_VER" && "$MC_VER" != "" && "$CUR_VER" != "" ]]; then
     sed -i 's/MC_VER=.*/MC_VER='"$MC_VER"'/g' Dockerfile
 fi
       
-git diff --no-ext-diff --quiet --exit-code
-if [[ $? -eq 1 ]]; then
-    echo " Commiting updated Dockefile..."
-    echo $MC_VER $CUR_VER
-    git config --global user.name "jsandas"
-    git config --global user.email "jsandas@users.noreply.github.com"
+# git diff --no-ext-diff --quiet --exit-code
+# if [[ $? -eq 1 ]]; then
+#     git branch -b mc_udate_$MC_VER
+#     echo " Commiting updated Dockefile..."
+#     echo $MC_VER $CUR_VER
+#     git config --global user.name "jsandas"
+#     git config --global user.email "jsandas@users.noreply.github.com"
 
-    git add -A
-    git commit -m "update mc version to $MC_VER"
-    git push --force
-fi
+#     git add -A
+#     git commit -m "update mc version to $MC_VER"
+#     git push
+# fi
