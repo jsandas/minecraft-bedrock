@@ -28,10 +28,7 @@ jobs:
       - name: Push image
         run: docker push --all-tags ghcr.io/jsandas/minecraft-bedrock 
 
-      - name: appVersion Update
-        run: "sed -i 's/appVersion:.*/appVersion: \"${{ env.MC_VER }}\"/g' chart/minecraft-bedrock/Chart.yaml"
-
-      - name: Helm Package
+      - name: Helm Package/Push
         run: |
-          helm package chart/minecraft-bedrock
+          helm package chart/minecraft-bedrock --app-version=${{ env.MC_VER }}
           helm push minecraft-bedrock-${{ env.CHART_VERSION }}.tgz oci://ghcr.io/jsandas
