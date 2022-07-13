@@ -7,7 +7,7 @@ CUR_VER=$(docker run ghcr.io/jsandas/minecraft-bedrock:latest cat version)
 if [[ "$MC_VER" != "$CUR_VER" && "$MC_VER" != "" && "$CUR_VER" != "" ]]; then 
     echo " New version found: $MC_VER"
     sed -i 's/MC_VER=.*/MC_VER='"$MC_VER"'/g' Dockerfile
-    sed -i 's/^appVersion:.*/appVersion: \"'"$MC_VER"'\"/g' chart/micraft-bedrock/Chart.yaml
+    sed -i 's/^appVersion:.*/appVersion: \"'"$MC_VER"'\"/g' chart/minecraft-bedrock/Chart.yaml
 fi
       
 # git diff --no-ext-diff --quiet --exit-code
