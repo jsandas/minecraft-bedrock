@@ -1,3 +1,7 @@
+Run minecraft bedrock edition server in a container with docker/docker-compose or kubernetes/helm.  
+
+The version of the server is static in the repo and is updated via the `Version Check` Github Action.
+
 **Docker**
 
 The first time: (it creates a docker container named minecraft-server, this command works only once)

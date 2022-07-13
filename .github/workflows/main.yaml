@@ -16,7 +16,7 @@ jobs:
       - name: Set envvars
         id: set_mcver
         run: |
-          echo "MC_VER=$(curl -s -H "accept-language:*" -H "User-Agent: Mozilla/5.0" https://www.minecraft.net/en-us/download/server/bedrock | grep serverBedrockLinux | grep -o -P '(?<=bedrock-server-).*(?=.zip)')" >> $GITHUB_ENV
+          echo "MC_VER=$(cat Dockerfile | grep MC_VER= | awk -F "=" '{print $2}')" >> $GITHUB_ENV
           echo "CHART_VERSION=$(cat chart/minecraft-bedrock/Chart.yaml | grep version: | awk '{print $2}')" >> $GITHUB_ENV
 
       - name: Container Image Build
@@ -29,7 +29,7 @@ jobs:
           docker logout ghcr.io/jsandas
 
       - name: Helm Chart Package
-        run: helm package chart/minecraft-bedrock --app-version=${{ env.MC_VER }}
+        run: helm package chart/minecraft-bedrock
 
       - name: Helm Chart Push
         run: |
