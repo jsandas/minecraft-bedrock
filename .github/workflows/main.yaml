@@ -20,7 +20,7 @@ jobs:
           echo "CHART_VERSION=$(cat chart/minecraft-bedrock/Chart.yaml | grep version: | awk '{print $2}')" >> $GITHUB_ENV
 
       - name: Container Image Build
-        run: docker build --tag ghcr.io/jsandas/minecraft-bedrock --tag ghcr.io/jsandas/minecraft-bedrock:${{ env.MC_VER }} --build-arg "${{ env.MC_VER }}" .
+        run: docker build --tag ghcr.io/jsandas/minecraft-bedrock --tag ghcr.io/jsandas/minecraft-bedrock:${{ env.MC_VER }} .
 
       - name: Container Image Push
         run: |
