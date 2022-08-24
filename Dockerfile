@@ -8,8 +8,8 @@ ENV MINECRAFT_VER=${MC_VER}
 
 WORKDIR /build
 
-RUN apt update && apt upgrade -y \
-    && apt install -y curl unzip
+RUN apt-get update && apt-get upgrade -y \
+    && apt-get install -y curl unzip
 RUN curl -O https://minecraft.azureedge.net/bin-linux/bedrock-server-${MINECRAFT_VER}.zip
 RUN unzip -qq bedrock-server-${MINECRAFT_VER}.zip
 RUN rm bedrock-server-${MINECRAFT_VER}.zip
@@ -21,8 +21,9 @@ FROM debian:bullseye
 ENV DEBIAN_FRONTEND=noninteractive
 ENV APP_DIR=/opt/minecraft
 
-RUN apt update && apt upgrade -y \
-    && apt autoremove -y \
+RUN apt-get update && apt-get upgrade -y \
+    && apt-get install -y curl \
+    && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*
 RUN useradd -m -d ${APP_DIR} -s /bin/bash minecraft \
     && chown -R minecraft ${APP_DIR}
