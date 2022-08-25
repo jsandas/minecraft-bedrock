@@ -18,11 +18,6 @@ jobs:
 
       - name: Container Image Build
         run: docker build --tag ghcr.io/jsandas/minecraft-bedrock --tag ghcr.io/jsandas/minecraft-bedrock:${{ env.MC_VER }} .
-
-      - name: Run integration tests
-        run: |
-          docker-compose up -d
-          docker-compose exec server bash -c "mc-monitor status-bedrock --host 127.0.0.1"
           
       - name: Container Image Push
         run: |
