@@ -14,7 +14,6 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Set envvars
-        id: set_mcver
         run: |
           echo "MC_VER=$(cat Dockerfile | grep MC_VER= | awk -F "=" '{print $2}')" >> $GITHUB_ENV
           echo "CHART_VERSION=$(cat chart/minecraft-bedrock/Chart.yaml | grep version: | awk '{print $2}')" >> $GITHUB_ENV
@@ -22,17 +21,20 @@ jobs:
       - name: Container Image Build
         run: docker build --tag ghcr.io/jsandas/minecraft-bedrock --tag ghcr.io/jsandas/minecraft-bedrock:${{ env.MC_VER }} .
 
+      - name: Run integration tests
+        run: |
+          docker-compose up -d
+          docker-compose exec server bash -c "mc-monitor status-bedrock --host 127.0.0.1"
+          
       - name: Container Image Push
         run: |
           echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io/jsandas -u ${{ github.actor }} --password-stdin
           docker push --all-tags ghcr.io/jsandas/minecraft-bedrock
           docker logout ghcr.io/jsandas
 
-      - name: Helm Chart Package
-        run: helm package chart/minecraft-bedrock
-
-      - name: Helm Chart Push
+      - name: Helm Chart Package/Push
         run: |
+          helm package chart/minecraft-bedrock
           echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io/jsandas -u ${{ github.actor }} --password-stdin
           helm push minecraft-bedrock-${{ env.CHART_VERSION }}.tgz oci://ghcr.io/jsandas
           docker logout ghcr.io/jsandas
