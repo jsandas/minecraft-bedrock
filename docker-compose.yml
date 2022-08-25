@@ -3,7 +3,7 @@ services:
   server:
     build:
       context: .
-    image: ghcr.io/jsandas/minecraft-bedrock
+    image: minecraft-bedrock
     environment:
       EULA_ACCEPT: true
       CFG_SERVER_NAME: test_server
