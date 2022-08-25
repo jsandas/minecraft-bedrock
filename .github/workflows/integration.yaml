@@ -19,5 +19,5 @@ jobs:
         run: |
           docker-compose build --no-cache
           docker-compose up -d
-          docker-compose exec server bash -c "mc-monitor status-bedrock --host 127.0.0.1"
+          docker-compose exec -it server bash -c "mc-monitor status-bedrock --host 127.0.0.1"
           docker-compose down
