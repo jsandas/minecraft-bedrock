@@ -3,16 +3,16 @@ services:
   server:
     build:
       context: .
-    image: ghcr.io/jsandas/minecraft-bedrock
+    image: minecraft-bedrock
     environment:
-      EULA_ACCEPT: true
+      EULA_ACCEPT: "true"
       CFG_SERVER_NAME: test_server
       CFG_GAMEMODE: creative
       CFG_LEVEL_NAME: test_server
     ports:
       - '19132:19132'
       - '19132:19132/udp'
-    volumes:
-      - $PWD/worlds:/opt/minecraft/worlds
+    # volumes:
+    #   - $PWD/worlds:/opt/minecraft/worlds
     tty: true
     stdin_open: true
