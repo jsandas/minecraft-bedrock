@@ -5,7 +5,7 @@ services:
       context: .
     image: minecraft-bedrock
     environment:
-      EULA_ACCEPT: true
+      EULA_ACCEPT: "true"
       CFG_SERVER_NAME: test_server
       CFG_GAMEMODE: creative
       CFG_LEVEL_NAME: test_server
