@@ -1,0 +1,21 @@
+name: Integration
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - run: |
+          echo "MC_VER=$(cat Dockerfile | grep MC_VER= | awk -F "=" '{print $2}')" >> $GITHUB_ENV
+          echo "CHART_VERSION=$(cat chart/minecraft-bedrock/Chart.yaml | grep version: | awk '{print $2}')" >> $GITHUB_ENV
+
+      - name: Run integration tests
+        run: |
+          docker-compose up --build -d
+          docker-compose exec server bash -c "mc-monitor status-bedrock --host 127.0.0.1"
