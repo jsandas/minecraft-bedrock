@@ -1,7 +1,7 @@
 # get minecraft bedrock server
 FROM debian:bullseye as build
 
-ARG MC_VER=1.19.63.01
+ARG MC_VER=1.19.71.02
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV MINECRAFT_VER=${MC_VER}
