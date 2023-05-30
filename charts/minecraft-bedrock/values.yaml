@@ -2,9 +2,6 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
-# replicaCount should always be 1
-replicaCount: 1
-
 image:
   repository: ghcr.io/jsandas/minecraft-bedrock
   pullPolicy: Always
