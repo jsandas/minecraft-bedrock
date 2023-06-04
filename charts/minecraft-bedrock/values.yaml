@@ -2,9 +2,6 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
-# replicaCount should always be 1
-replicaCount: 1
-
 image:
   repository: ghcr.io/jsandas/minecraft-bedrock
   pullPolicy: Always
@@ -93,7 +90,7 @@ minecraft:
     # Links:"
     #   https://www.minecraft.net/en-us/terms"
     #   https://privacy.microsoft.com/en-us/privacystatement"
-    EULA_ACCEPT: "true"
+    EULA_ACCEPT: "false"
   # Config keys match server.properties execept hyphens (-) need to be replaced with underscores (_) 
   # while upper-case is optional for keys. Example: server-name = SERVER_NAME
   # Config values cannot have space as they will not be set properly in the properties file
