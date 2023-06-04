@@ -36,13 +36,20 @@ helm upgrade --install <release_name> oci://ghcr.io/jsandas/minecraft-bedrock
 ```
 Example install with specific namespace and custom values file:
 ```
-helm upgrade --install minecraft-bedrock oci://ghcr.io/jsandas/minecraft-bedrock -f custom-values.yaml -n minecraft --create-namespace
+helm upgrade --install minecraft-bedrock oci://ghcr.io/jsandas/minecraft-bedrock -f custom-values.yaml --namespace minecraft --create-namespace
 ```
 
-To managed minecraft server:
+To manage minecraft server (assuming a single deployment of minecraft per namespace):
 ```
-kubectl -n minecraft get pods | grep minecraft-bedrock
+export POD=$(kubectl get -n <namespace> pods | grep -v NAME | cut -d " " -f1)
+kubectl exec -n <namespace> -it $POD -- bash -c "./mccli"
 ```
+Example:
+```
+export POD=$(kubectl get -n minecraft pods | grep -v NAME | cut -d " " -f1)
+kubectl exec -n minecraft -it $POD -- bash -c "./mccli"
+```
+The mccli behaves similar to the standard minecraft console.  Commands such as `help` or `gamerule` can run.  When done use `ctrl+c` to exit mccli.
 
 Notes:
-Clients will need to be configured to connect to the server.  The server is unable to broadcast outside of the kubernetes network.
+Clients will need to be configured to connect to the server's ip address or hostname.  The minecraft server application is unable to broadcast outside of the kubernetes network.
