@@ -14,7 +14,11 @@ function config() {
     done
 }
 
-config
+function download() {
+    curl -O https://minecraft.azureedge.net/bin-linux/bedrock-server-${MINECRAFT_VER}.zip
+    unzip -qq bedrock-server-${MINECRAFT_VER}.zip
+    rm bedrock-server-${MINECRAFT_VER}.zip
+}
 
 if [[ "$@" == "" ]]; then
     if [[ $EULA_ACCEPT != 'true' ]]; then
@@ -26,6 +30,10 @@ if [[ "$@" == "" ]]; then
         echo
         exit 1
     fi
+
+    download 
+
+    config
 
     export LD_LIBRARY_PATH=.
     # create named pipe for streaming input from another shell
