@@ -20,12 +20,31 @@ function check_versions() {
 
 function check_server() {
     _mc_ver=$(cat Dockerfile | grep MC_VER= | awk -F "=" '{print $2}')
+
+    _max_rety=5
+    _attempts=1
+    while true
+    do
+        echo -n " check attempt $_attempts..."
+        docker compose exec -it server bash -c "mc-monitor status-bedrock --host 127.0.0.1" >/dev/null 2>&1
+        if (( $? == 0 )) || (( $_attempts > $_max_rety )); then
+            echo "success"
+            break
+        fi
+        echo "failed"
+        _attempts=$((_attempts+1))
+        sleep 5
+    done
+
+    sleep 2
     _check_results=$(docker compose exec -it server bash -c "mc-monitor status-bedrock --host 127.0.0.1")
     _check_version=$(echo $_check_results | cut -d " " -f3 | cut -d "=" -f2)
 
     if [[ "$_mc_ver" != "$_check_version"* ]]; then
         echo "check failed"
         exit 1
+    else
+        echo "Found version: $_check_version"
     fi
 }
 
