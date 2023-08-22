@@ -1,11 +1,44 @@
 #!/bin/bash
 
-while true
-do
-    cat output_pipe
-    echo -n > output_pipe
-    read line
-    echo $line > input_pipe
-    sleep 1
-    cat output_pipe
-done
+function check_versions() {
+    _mc_ver=$(curl -s -H "accept-language:*" -H "User-Agent: Mozilla/5.0" https://www.minecraft.net/en-us/download/server/bedrock | grep serverBedrockLinux | grep -o -P '(?<=bedrock-server-).*(?=.zip)')
+    _image_ver=$(docker run ghcr.io/jsandas/minecraft-bedrock:latest cat version)
+    _chart_ver=$(cat charts/minecraft-bedrock/Chart.yaml | grep appVersion | awk '{print $2}' | tr -d '"')
+
+    if [[ -z $_mc_ver || -z $_image_ver || -z $_chart_ver ]]; then
+        echo " Failed to retrieve all versions"
+        echo " mc_ver=$_mc_ver image_ver=$_image_ver chart_ver=$_chart_ver"
+        exit 1
+    fi
+
+    if [[ "$_mc_ver" != "$_image_ver" || "$_mc_ver" != "$_chart_ver" ]]; then 
+        echo " New version found: $_mc_ver"
+        sed -i 's/MC_VER=.*/MC_VER='"$_mc_ver"'/g' Dockerfile
+        sed -i 's/^appVersion:.*/appVersion: \"'"$_mc_ver"'\"/g' charts/minecraft-bedrock/Chart.yaml
+    fi    
+}
+
+function check_server() {
+    _mc_ver=$(cat Dockerfile | grep MC_VER= | awk -F "=" '{print $2}')
+    _check_results=$(docker compose exec -it server bash -c "mc-monitor status-bedrock --host 127.0.0.1")
+    _check_version=$(echo $_check_results | cut -d " " -f3 | cut -d "=" -f2)
+
+    if [[ "$_mc_ver" != "$_check_version"* ]]; then
+        echo "check failed"
+        exit 1
+    fi
+}
+
+if [[ "$@" != "" ]]; then
+    $@
+else
+    while true
+    do
+        cat output_pipe
+        echo -n > output_pipe
+        read line
+        echo $line > input_pipe
+        sleep 1
+        cat output_pipe
+    done
+fi
