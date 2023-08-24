@@ -2,7 +2,7 @@
 
 function check_versions() {
     _mc_ver=$(curl -s -H "accept-language:*" -H "User-Agent: Mozilla/5.0" https://www.minecraft.net/en-us/download/server/bedrock | grep serverBedrockLinux | grep -o -P '(?<=bedrock-server-).*(?=.zip)')
-    _image_ver=$(docker run ghcr.io/jsandas/minecraft-bedrock:latest cat version)
+    _image_ver=$(docker run ghcr.io/jsandas/minecraft-bedrock:latest bash -c "env | grep MINECRAFT_VER | cut -d "=" -f2")
     _chart_ver=$(cat charts/minecraft-bedrock/Chart.yaml | grep appVersion | awk '{print $2}' | tr -d '"')
 
     if [[ -z $_mc_ver || -z $_image_ver || -z $_chart_ver ]]; then
