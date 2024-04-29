@@ -1,6 +1,6 @@
 FROM debian:bullseye
 
-ARG MC_VER=1.20.80.05
+ARG MC_VER=1.20.81.01
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV MINECRAFT_VER=${MC_VER}
