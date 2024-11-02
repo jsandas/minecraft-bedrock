@@ -9,7 +9,7 @@ jobs:
   integration-test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - run: |
           echo "MC_VER=$(cat Dockerfile | grep MC_VER= | awk -F "=" '{print $2}')" >> $GITHUB_ENV
