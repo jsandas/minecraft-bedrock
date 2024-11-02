@@ -33,9 +33,9 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           push: true
-          tags: 
-            - ghcr.io/jsandas/minecraft-bedrock:latest
-            - ghcr.io/jsandas/minecraft-bedrock:${{ env.MC_VER }}
+          tags: |
+            ghcr.io/jsandas/minecraft-bedrock:latest
+            ghcr.io/jsandas/minecraft-bedrock:${{ env.MC_VER }}
 
       - name: Chart | Push
         uses: appany/helm-oci-chart-releaser@v0.3.0
