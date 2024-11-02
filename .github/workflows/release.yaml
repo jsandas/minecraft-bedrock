@@ -34,6 +34,8 @@ jobs:
         uses: docker/build-push-action@v6
         with:
           push: true
+          platforms: |
+            linux/amd64
           tags: |
             ghcr.io/jsandas/minecraft-bedrock:latest
             ghcr.io/jsandas/minecraft-bedrock:${{ env.MC_VER }}
