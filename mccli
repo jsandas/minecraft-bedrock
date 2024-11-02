@@ -27,12 +27,16 @@ function check_server() {
     do
         echo -n " check attempt $_attempts..."
         docker compose exec -it server bash -c "mc-monitor status-bedrock --host 127.0.0.1" >/dev/null 2>&1
-        if (( $? == 0 )) || (( $_attempts > $_max_rety )); then
+        if (( $? == 0 )); then
             echo "success"
             break
         fi
         echo "failed"
         _attempts=$((_attempts+1))
+        if (( $_attempts > $_max_rety )); then
+            echo "max retries reached, exiting..."
+            exit 1
+        fi
         sleep 5
     done
 

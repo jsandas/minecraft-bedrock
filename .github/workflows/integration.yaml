@@ -14,10 +14,13 @@ jobs:
       - run: |
           echo "MC_VER=$(cat Dockerfile | grep MC_VER= | awk -F "=" '{print $2}')" >> $GITHUB_ENV
 
-      - name: Run integration tests
+      - name: Build and run server
         run: |
           docker compose build --no-cache
           docker compose up -d
+
+      - name: Run integration tests
+        run: |
           ./mccli check_server
       
       - run: |
