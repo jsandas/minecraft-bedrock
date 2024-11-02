@@ -1,6 +1,7 @@
 name: Release
 
 on:
+  workflow_dispatch: {}
   push:
     branches:
       - main
@@ -9,25 +10,41 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
 
       - name: Set envvars
         run: |
           echo "MC_VER=$(cat Dockerfile | grep MC_VER= | awk -F "=" '{print $2}')" >> $GITHUB_ENV
           echo "CHART_VERSION=$(cat charts/minecraft-bedrock/Chart.yaml | grep version: | awk '{print $2}')" >> $GITHUB_ENV
 
-      - name: Container Image Build
-        run: docker build --tag ghcr.io/jsandas/minecraft-bedrock --tag ghcr.io/jsandas/minecraft-bedrock:${{ env.MC_VER }} .
-          
-      - name: Container Image Push
-        run: |
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io/jsandas -u ${{ github.actor }} --password-stdin
-          docker push --all-tags ghcr.io/jsandas/minecraft-bedrock
-          docker logout ghcr.io/jsandas
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
 
-      - name: Helm Chart Package/Push
-        run: |
-          helm package charts/minecraft-bedrock
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io/jsandas -u ${{ github.actor }} --password-stdin
-          helm push minecraft-bedrock-${{ env.CHART_VERSION }}.tgz oci://ghcr.io/jsandas
-          docker logout ghcr.io/jsandas
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          push: true
+          tags: 
+            - ghcr.io/jsandas/minecraft-bedrock:latest
+            - ghcr.io/jsandas/minecraft-bedrock:${{ env.MC_VER }}
+
+      - name: Chart | Push
+        uses: appany/helm-oci-chart-releaser@v0.3.0
+        with:
+          name: minecraft-bedrock
+          repository: jsandas
+          tag: ${{ env.CHART_VERSION }}
+          path: charts/minecraft-bedrock
+          registry: ghcr.io
+          registry_username: ${{ github.actor }}
+          registry_password: ${{ secrets.GITHUB_TOKEN }}
+          update_dependencies: 'true' # Defaults to false
