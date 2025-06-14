@@ -1,4 +1,4 @@
-Run minecraft bedrock edition server in a container with docker/docker-compose or kubernetes/helm.  
+Run Minecraft Bedrock Edition Server in a container with docker/docker-compose or kubernetes/helm.  
 
 The version of the server is static in the repo and is updated via the `Version Check` Github Action.
 
@@ -52,4 +52,4 @@ kubectl exec -n minecraft -it $POD -- bash -c "./mccli"
 The mccli behaves similar to the standard minecraft console.  Commands such as `help` or `gamerule` can run.  When done use `ctrl+c` to exit mccli.
 
 Notes:
-The Minecraft server application is unable to broadcast outside of the kubernetes network. Clients will need to be configured to connect to the server's ip address or hostname unless `hostNetwork` is set to `true`.
+Minecraft Bedrock Server application is unable to broadcast outside of the kubernetes network. Clients will need to be configured to connect to the server's ip address or hostname unless `hostNetwork` is set to `true`.  If `hostNetwork` is `true` ensure that `service.port` is unique if depoloying more that on instance of Minecraft Bedrock Server.
