@@ -52,4 +52,4 @@ kubectl exec -n minecraft -it $POD -- bash -c "./mccli"
 The mccli behaves similar to the standard minecraft console.  Commands such as `help` or `gamerule` can run.  When done use `ctrl+c` to exit mccli.
 
 Notes:
-Clients will need to be configured to connect to the server's ip address or hostname.  The minecraft server application is unable to broadcast outside of the kubernetes network.
+The Minecraft server application is unable to broadcast outside of the kubernetes network. Clients will need to be configured to connect to the server's ip address or hostname unless `hostNetwork` is set to `true`.

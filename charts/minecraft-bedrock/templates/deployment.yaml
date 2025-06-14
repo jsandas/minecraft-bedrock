@@ -36,6 +36,8 @@ spec:
           env:
             - name: EULA_ACCEPT
               value: {{ .Values.minecraft.env.EULA_ACCEPT | quote }}
+            - name: CFG_SERVER_PORT
+              value: {{ .Values.service.port | quote }}
             {{- range $k, $v := .Values.minecraft.config }}
             - name: CFG_{{ $k }}
               value: {{ $v | quote }}
@@ -69,6 +71,9 @@ spec:
           volumeMounts:
             - name: minecraft-worlds
               mountPath: /opt/minecraft/worlds
+      {{- if .Values.hostNetwork }}
+      hostNetwork: {{ .Values.hostNetwork }}
+      {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
         {{- toYaml . | nindent 8 }}

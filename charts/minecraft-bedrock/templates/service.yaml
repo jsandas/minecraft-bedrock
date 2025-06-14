@@ -11,7 +11,7 @@ spec:
   {{- end }}
   ports:
     - port: {{ .Values.service.port }}
-      targetPort: 19132
+      targetPort: {{ .Values.service.port }}
       protocol: UDP
       name: minecraft-udp
       {{- if eq .Values.service.type "NodePort" }}
