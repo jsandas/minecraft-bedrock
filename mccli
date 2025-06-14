@@ -1,7 +1,13 @@
 #!/bin/bash
 
 function check_versions() {
-    _mc_ver=$(curl -s -H "accept-language:*" -H "User-Agent: Mozilla/5.0" https://www.minecraft.net/en-us/download/server/bedrock | grep serverBedrockLinux | grep -o -P '(?<=bedrock-server-).*(?=.zip)')
+    regex='bedrock-server-([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+).zip'
+    _mc_url=$(curl -s https://net-secondary.web.minecraft-services.net/api/v1.0/download/links \
+        | jq '.[].links.[] | select(.downloadType=="serverBedrockLinux") | .downloadUrl')
+    if [[ $_mc_url =~ $regex ]]; then
+        _mc_ver="${BASH_REMATCH[1]}"
+    fi
+
     _image_ver=$(docker run ghcr.io/jsandas/minecraft-bedrock:latest bash -c "env | grep MINECRAFT_VER | cut -d "=" -f2")
     _chart_ver=$(cat charts/minecraft-bedrock/Chart.yaml | grep appVersion | awk '{print $2}' | tr -d '"')
 
