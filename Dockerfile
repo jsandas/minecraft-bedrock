@@ -1,6 +1,6 @@
 FROM debian:bookworm
 
-ARG MC_VER=1.21.92.1
+ARG MC_VER=1.21.93.1
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV MINECRAFT_VER=${MC_VER}
