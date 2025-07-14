@@ -8,10 +8,11 @@ spec:
   type: {{ .Values.service.type }}
   {{- if eq .Values.service.type "LoadBalancer" }}
   loadBalancerIP: {{ default "" .Values.service.loadBalancerIP }}
+  loadBalancerClass: {{ default "" .Values.service.loadBalancerClass }}
   {{- end }}
   ports:
     - port: {{ .Values.service.port }}
-      targetPort: {{ .Values.service.port }}
+      targetPort: minecraft-udp
       protocol: UDP
       name: minecraft-udp
       {{- if eq .Values.service.type "NodePort" }}
