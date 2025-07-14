@@ -2,6 +2,21 @@
 # This is a YAML-formatted file.
 # Declare variables to be passed into your templates.
 
+minecraft:
+  env:
+    # Must accept the Minecraft EULA and Microsoft Privacy Policy"
+    # Links:"
+    #   https://www.minecraft.net/en-us/terms"
+    #   https://privacy.microsoft.com/en-us/privacystatement"
+    EULA_ACCEPT: "false"
+  # Config keys match server.properties execept hyphens (-) need to be replaced with underscores (_) 
+  # while upper-case is optional for keys. Example: server-name = SERVER_NAME
+  # Config values cannot have space as they will not be set properly in the properties file
+  config:
+    SERVER_NAME: test_server
+    GAMEMODE: creative
+    LEVEL_NAME: test_server
+
 image:
   repository: ghcr.io/jsandas/minecraft-bedrock
   # This sets the pull policy for images.
@@ -117,19 +132,3 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
-
-minecraft:
-  # Environmental variables
-  env:
-    # Must accept the Minecraft EULA and Microsoft Privacy Policy"
-    # Links:"
-    #   https://www.minecraft.net/en-us/terms"
-    #   https://privacy.microsoft.com/en-us/privacystatement"
-    EULA_ACCEPT: "false"
-  # Config keys match server.properties execept hyphens (-) need to be replaced with underscores (_) 
-  # while upper-case is optional for keys. Example: server-name = SERVER_NAME
-  # Config values cannot have space as they will not be set properly in the properties file
-  config:
-    SERVER_NAME: test_server
-    GAMEMODE: creative
-    LEVEL_NAME: test_server
