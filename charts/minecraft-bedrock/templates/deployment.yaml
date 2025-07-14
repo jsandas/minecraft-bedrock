@@ -16,19 +16,26 @@ spec:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       labels:
-        {{- include "minecraft-bedrock.selectorLabels" . | nindent 8 }}
+        {{- include "minecraft-bedrock.labels" . | nindent 8 }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
       {{- end }}
       serviceAccountName: {{ include "minecraft-bedrock.serviceAccountName" . }}
+      {{- with .Values.podSecurityContext }}
       securityContext:
-        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       containers:
         - name: {{ .Chart.Name }}
+          {{- with .Values.securityContext }}
           securityContext:
-            {{- toYaml .Values.securityContext | nindent 12 }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
           imagePullPolicy: {{ .Values.image.pullPolicy }}
           tty: true
@@ -46,33 +53,32 @@ spec:
             - name: minecraft-udp
               containerPort: {{ .Values.service.port }}
               protocol: UDP
+          {{- with .Values.livenessProbe }}
           livenessProbe:
-            exec:
-              command:
-                - mc-monitor 
-                - status-bedrock 
-                - --host
-                - 127.0.0.1
-                - --port
-                - "{{ .Values.service.port }}"
-            initialDelaySeconds: 60
-            periodSeconds: 30
-          # readinessProbe:
-          #   exec:
-          #     command:
-          #       - mc-monitor 
-          #       - status-bedrock 
-          #       - --host
-          #       - 127.0.0.1 
-            initialDelaySeconds: 30
-            periodSeconds: 30
+            {{- toYaml . | nindent 12 }}
+          {{- end }}w
+          {{- with .Values.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.resources }}
           resources:
-            {{- toYaml .Values.resources | nindent 12 }}
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
           volumeMounts:
             - name: minecraft-worlds
               mountPath: /opt/minecraft/worlds
-      {{- if .Values.hostNetwork }}
-      hostNetwork: {{ .Values.hostNetwork }}
+      volumes:
+        - name: minecraft-worlds
+      {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+        {{- if .Values.persistence.existingClaim }}
+            claimName: {{ .Values.persistence.existingClaim }}
+        {{- else }}
+            claimName: {{ template "minecraft-bedrock.fullname" . }}-worlds
+        {{- end }}
+      {{- else }}
+          emptyDir: {}
       {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
@@ -85,16 +91,4 @@ spec:
       {{- with .Values.tolerations }}
       tolerations:
         {{- toYaml . | nindent 8 }}
-      {{- end }}
-      volumes:
-        - name: minecraft-worlds
-      {{- if .Values.persistence.enabled }}
-          persistentVolumeClaim:
-        {{- if .Values.persistence.existingClaim }}
-            claimName: {{ .Values.persistence.existingClaim }}
-        {{- else }}
-            claimName: {{ template "minecraft-bedrock.fullname" . }}-worlds
-        {{- end }}
-      {{- else }}
-          emptyDir: {}
       {{- end }}
