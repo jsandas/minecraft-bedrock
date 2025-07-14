@@ -1,6 +1,6 @@
 apiVersion: v2
 name: minecraft-bedrock
-description: A Helm chart for Kubernetes
+description: Helm chart for running minecraft bedrock edition server
 type: application
-version: 0.1.2
+version: 0.1.3
 appVersion: "1.21.93.1"
