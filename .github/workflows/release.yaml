@@ -15,7 +15,7 @@ jobs:
       - name: Set envvars
         run: |
           echo "MC_VER=$(cat Dockerfile | grep MC_VER= | awk -F "=" '{print $2}')" >> $GITHUB_ENV
-          echo "CHART_VERSION=$(cat charts/minecraft-bedrock/Chart.yaml | grep version: | awk '{print $2}')" >> $GITHUB_ENV
+          echo "CHART_VERSION=$(cat helm/minecraft-bedrock/Chart.yaml | grep version: | awk '{print $2}')" >> $GITHUB_ENV
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -46,7 +46,7 @@ jobs:
           name: minecraft-bedrock
           repository: jsandas
           tag: ${{ env.CHART_VERSION }}
-          path: charts/minecraft-bedrock
+          path: helm/minecraft-bedrock
           registry: ghcr.io
           registry_username: ${{ github.actor }}
           registry_password: ${{ secrets.GITHUB_TOKEN }}

@@ -9,7 +9,7 @@ function check_versions() {
     fi
 
     _image_ver=$(docker run ghcr.io/jsandas/minecraft-bedrock:latest bash -c "env | grep MINECRAFT_VER | cut -d "=" -f2")
-    _chart_ver=$(cat charts/minecraft-bedrock/Chart.yaml | grep appVersion | awk '{print $2}' | tr -d '"')
+    _chart_ver=$(cat helm/minecraft-bedrock/Chart.yaml | grep appVersion | awk '{print $2}' | tr -d '"')
 
     if [[ -z $_mc_ver || -z $_image_ver || -z $_chart_ver ]]; then
         echo " Failed to retrieve all versions"
@@ -20,7 +20,7 @@ function check_versions() {
     if [[ "$_mc_ver" != "$_image_ver" || "$_mc_ver" != "$_chart_ver" ]]; then 
         echo " New version found: $_mc_ver"
         sed -i 's/MC_VER=.*/MC_VER='"$_mc_ver"'/g' Dockerfile
-        sed -i 's/^appVersion:.*/appVersion: \"'"$_mc_ver"'\"/g' charts/minecraft-bedrock/Chart.yaml
+        sed -i 's/^appVersion:.*/appVersion: \"'"$_mc_ver"'\"/g' helm/minecraft-bedrock/Chart.yaml
     fi    
 }
 
