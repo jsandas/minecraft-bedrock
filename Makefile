@@ -1,6 +1,6 @@
 run:
-	go run ./cmd/minecraft-server-wrapper
+	go run ./cmd/minecraft-bedrock-wrapper
 
 run-docker:
-	docker build -t gogo-mc-bedrock-server .
-	docker run -it --rm -p 8080:8080 -p 19132:19132/udp -e EULA_ACCEPT=true gogo-mc-bedrock-server
+	docker build -t minecraft-bedrock .
+	docker run -it --rm -p 8080:8080 -p 19132:19132/udp -e EULA_ACCEPT=true minecraft-bedrock

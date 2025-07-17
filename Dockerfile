@@ -4,7 +4,7 @@ WORKDIR /app
 
 COPY . .
 
-RUN go build -o bedrock-server-wrapper ./cmd/bedrock-server-wrapper
+RUN go build -o minecraft-bedrock-wrapper ./cmd/minecraft-bedrock-wrapper
 
 
 FROM debian:bookworm
@@ -26,7 +26,7 @@ RUN useradd -m -d ${APP_DIR} -s /bin/bash minecraft \
 
 WORKDIR ${APP_DIR}
 
-COPY --from=builder /app/bedrock-server-wrapper ${APP_DIR}/bedrock-server-wrapper
+COPY --from=builder /app/minecraft-bedrock-wrapper ${APP_DIR}/minecraft-bedrock-wrapper
 COPY --from=itzg/mc-monitor /mc-monitor /usr/local/bin/mc-monitor
 
 RUN chown -R minecraft ${APP_DIR}
@@ -36,4 +36,4 @@ USER minecraft
 EXPOSE 19132/udp
 EXPOSE 19133/udp
 
-ENTRYPOINT ["/opt/minecraft/bedrock-server-wrapper"]
+ENTRYPOINT ["/opt/minecraft/minecraft-bedrock-wrapper"]
