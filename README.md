@@ -1,32 +1,23 @@
-Run Minecraft Bedrock Edition Server in a container with docker/docker-compose or kubernetes/helm.  
+Run Minecraft Server Bedrock Edition in a container with docker compose or kubernetes/helm.  
 
 The version of the server is static in the repo and is updated via the `Version Check` Github Action.
 
+This repository contains a golang wrapper for running the server as well as an interactive web UI for view the console
+and typing console commands.
+
+![Screenshot of web ui](images/webui.png)
+
 **Docker**
 
-The first time: (it creates a docker container named minecraft-server, this command works only once)
-`docker-compose run --name minecraft-server server`
-
-To return to the terminal and keep the server running:
-Keep holding CTRL, press P, release P, press Q, release Q, and release CTRL
-
-Starting interactively (CTRL+C will stop it, use the escape sequence to detach without stopping it)
-`docker start minecraft-server -i`
-
-Starting seeing the log (CTRL+C will not stop it but you won't be able to run commands)
-`docker start minecraft-server -a`
-
-Starting in the background
-`docker start minecraft-server`
-
-Opening the server console which were running in background: (you won't see previous log messages, just tart typing commands)
-`docker attach minecraft-server`
-
-Stopping the server that is running in background:
-`docker stop minecraft-server`
-
-To remove the container that you have created (the data folder will not be deleted, it must be stopped)
-`docker rm minecraft-server`
+Stand up Minecraft Server Bedrock Edition with Docker:
+```
+docker compose up -d
+```
+View logs:
+```
+docker compose logs -f server
+```
+View logs and run console commands via web ui http://localhost:8080
 
 **Kubernetes**
 
