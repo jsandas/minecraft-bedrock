@@ -5,6 +5,7 @@ services:
     image: minecraft-bedrock
     environment:
       EULA_ACCEPT: "true"
+      AUTH_KEY: "supersecret"
       CFG_SERVER_NAME: test_server
       CFG_GAMEMODE: creative
       CFG_LEVEL_NAME: test_server
