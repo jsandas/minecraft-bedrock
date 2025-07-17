@@ -5,10 +5,10 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/jsandas/minecraft-bedrock/internal/config"
-	"github.com/jsandas/minecraft-bedrock/internal/downloader"
-	"github.com/jsandas/minecraft-bedrock/internal/runner"
-	"github.com/jsandas/minecraft-bedrock/internal/server"
+	"github.com/jsandas/bedrock-server/internal/config"
+	"github.com/jsandas/bedrock-server/internal/downloader"
+	"github.com/jsandas/bedrock-server/internal/runner"
+	"github.com/jsandas/bedrock-server/internal/server"
 )
 
 var (

@@ -7,7 +7,7 @@ import (
 	"sync"
 
 	"github.com/gorilla/websocket"
-	"github.com/jsandas/minecraft-bedrock/internal/runner"
+	"github.com/jsandas/bedrock-server/internal/runner"
 )
 
 var upgrader = websocket.Upgrader{
