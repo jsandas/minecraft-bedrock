@@ -8,7 +8,7 @@ function check_versions() {
         _mc_ver="${BASH_REMATCH[1]}"
     fi
 
-    _image_ver=$(docker run ghcr.io/jsandas/minecraft-bedrock:latest bash -c "env | grep MINECRAFT_VER | cut -d "=" -f2")
+    _image_ver=$(docker run --entrypoint /usr/bin/env ghcr.io/jsandas/minecraft-bedrock:latest | grep MINECRAFT_VER | cut -d "=" -f2)
     _chart_ver=$(cat helm/minecraft-bedrock/Chart.yaml | grep appVersion | awk '{print $2}' | tr -d '"')
 
     if [[ -z $_mc_ver || -z $_image_ver || -z $_chart_ver ]]; then
