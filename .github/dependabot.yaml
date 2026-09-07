@@ -1,0 +1,18 @@
+version: 2
+updates:
+  - package-ecosystem: "gomod"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+    groups:
+      all:
+        patterns:
+          - "*"
+  - package-ecosystem: "github-actions"
+    directory: ".github/workflows"
+    schedule:
+      interval: "monthly"
+    groups:
+      all:
+        patterns:
+          - "*"

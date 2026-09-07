@@ -9,13 +9,12 @@ jobs:
   version-check:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Version check
         run: ./mccli check_versions
   
-      - uses: tibdex/github-app-token@v2
+      - uses: tibdex/github-app-token@3beb63f4bd073e61482598c45c71c1019b59b73a # v2.1.0
         id: generate-token
         with:
           app_id: ${{ secrets.APP_ID }}
@@ -23,7 +22,7 @@ jobs:
 
       - name: Create Pull Request
         id: cpr
-        uses: peter-evans/create-pull-request@v7
+        uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
           token: ${{ steps.generate-token.outputs.token }}
           commit-message: Update minecraft version
