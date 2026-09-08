@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
 	"log/slog"
@@ -35,6 +36,9 @@ func run(args []string) int {
 	loadFlagsFromEnv(listenAddress, appDir, mcVersion, authKey)
 
 	if err := fs.Parse(args); err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return 0
+		}
 		fmt.Fprintf(os.Stderr, "Error parsing flags: %v\n", err)
 		return 1
 	}
