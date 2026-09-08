@@ -1,8 +1,11 @@
 package main
 
 import (
+	"errors"
 	"flag"
 	"fmt"
+	"io"
+	"log/slog"
 	"os"
 
 	"github.com/jsandas/bedrock-server/internal/config"
@@ -11,101 +14,158 @@ import (
 	"github.com/jsandas/bedrock-server/internal/server"
 )
 
-var (
-	command       = flag.String("command", "./bedrock_server", "command to execute (used for debugging purposes)")
-	listenAddress = flag.String("listen", ":8080", "address for the web server")
-	appDir        = flag.String("app-dir", "", "directory containing the minecraft server (defaults to current directory)")
-	mcVersion     = flag.String("mc-version", "", "Minecraft version to download (if not already present)")
-	authKey       = flag.String("auth-key", "", "pre-shared key for authentication (recommended to use AUTH_KEY env var instead)")
-)
-
-func init() {
-	// Set defaults from environment variables if present
-	if envListenAddress := os.Getenv("LISTEN_ADDRESS"); envListenAddress != "" {
-		flag.Set("listen", envListenAddress)
-	}
-	if envAppDir := os.Getenv("APP_DIR"); envAppDir != "" {
-		flag.Set("app-dir", envAppDir)
-	}
-	if envMcVer := os.Getenv("MINECRAFT_VER"); envMcVer != "" {
-		flag.Set("mc-version", envMcVer)
-	}
-	if envAuthKey := os.Getenv("AUTH_KEY"); envAuthKey != "" {
-		flag.Set("auth-key", envAuthKey)
-	}
-
-	flag.Parse()
-
-	// Ensure we have an auth key
-	if *authKey == "" {
-		fmt.Fprintf(os.Stderr, "Error: Authentication key is required. Set it using the AUTH_KEY environment variable or --auth-key flag\n")
-		os.Exit(1)
-	}
+func main() {
+	os.Exit(run(os.Args[1:]))
 }
 
-func main() {
-	os.Setenv("LD_LIBRARY_PATH", ".")
-
-	// Check if EULA_ACCEPT is set to true
-	if eula := os.Getenv("EULA_ACCEPT"); eula != "true" {
-		fmt.Fprintf(os.Stderr, "You must accept the EULA by setting EULA_ACCEPT to 'true'\n Links:\n")
-		fmt.Fprintf(os.Stderr, "   https://minecraft.net/eula\n")
-		fmt.Fprintf(os.Stderr, "   https://go.microsoft.com/fwlink/?LinkId=521839\n")
-		os.Exit(1)
+func run(args []string) int {
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	flags, err := parseFlags(args)
+	if err != nil {
+		return handleFlagError(err)
 	}
 
-	// Get the working directory
-	var workDir string
-	if *appDir != "" {
-		workDir = *appDir
-	} else {
-		var err error
-		workDir, err = os.Getwd()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error getting working directory: %v\n", err)
-			os.Exit(1)
+	if err = validateRuntimeConfig(flags.authKey); err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		return 1
+	}
+
+	workDir, err := resolveWorkDir(*flags.appDir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error getting working directory: %v\n", err)
+		return 1
+	}
+
+	if err = prepareRuntime(flags, workDir, logger); err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		return 1
+	}
+
+	return runServer(flags, logger)
+}
+
+func parseFlags(args []string) (cliFlags, error) {
+	fs := flag.NewFlagSet("bedrock", flag.ContinueOnError)
+	flags := cliFlags{}
+	flags.command = fs.String("command", "./bedrock_server", "command to execute (used for debugging purposes)")
+	flags.listenAddress = fs.String("listen", ":8080", "address for the web server")
+	flags.appDir = fs.String("app-dir", "", "directory containing the minecraft server (defaults to current directory)")
+	flags.mcVersion = fs.String("mc-version", "", "Minecraft version to download (if not already present)")
+	flags.authKey = fs.String(
+		"auth-key",
+		"",
+		"pre-shared key for authentication (recommended to use AUTH_KEY env var instead)",
+	)
+
+	loadFlagsFromEnv(flags.listenAddress, flags.appDir, flags.mcVersion, flags.authKey)
+	if err := fs.Parse(args); err != nil {
+		return cliFlags{}, err
+	}
+	return flags, nil
+}
+
+type cliFlags struct {
+	command       *string
+	listenAddress *string
+	appDir        *string
+	mcVersion     *string
+	authKey       *string
+}
+
+func handleFlagError(err error) int {
+	if errors.Is(err, flag.ErrHelp) {
+		return 0
+	}
+	fmt.Fprintf(os.Stderr, "Error parsing flags: %v\n", err)
+	return 1
+}
+
+func validateRuntimeConfig(authKey *string) error {
+	if *authKey == "" {
+		return fmt.Errorf(
+			"error: authentication key is required. Set it using the AUTH_KEY environment variable or --auth-key flag",
+		)
+	}
+	if err := os.Setenv("LD_LIBRARY_PATH", "."); err != nil {
+		return fmt.Errorf("error setting LD_LIBRARY_PATH: %w", err)
+	}
+	if !eulaAccepted() {
+		return fmt.Errorf(
+			"you must accept the EULA by setting EULA_ACCEPT to 'true'\nLinks:\n   https://minecraft.net/eula\n   https://go.microsoft.com/fwlink/?LinkId=521839",
+		)
+	}
+	return nil
+}
+
+func prepareRuntime(flags cliFlags, workDir string, logger *slog.Logger) error {
+	if *flags.mcVersion != "" {
+		logger.Info("Downloading Minecraft server version", "version", *flags.mcVersion)
+		if downloadErr := downloader.DownloadMinecraftServer(*flags.mcVersion, workDir, ""); downloadErr != nil {
+			return fmt.Errorf("error downloading server: %w", downloadErr)
 		}
 	}
+	if updateErr := config.UpdateServerProperties(workDir, logger); updateErr != nil {
+		return fmt.Errorf("error updating server properties: %w", updateErr)
+	}
+	return nil
+}
 
-	// Download server if version is specified
-	if *mcVersion != "" {
-		fmt.Printf("Downloading Minecraft server version %s...\n", *mcVersion)
-		if err := downloader.DownloadMinecraftServer(*mcVersion, workDir, ""); err != nil {
-			fmt.Fprintf(os.Stderr, "Error downloading server: %v\n", err)
-			os.Exit(1)
-		}
+func runServer(flags cliFlags, logger *slog.Logger) int {
+	cmdRunner := runner.New(*flags.command)
+	if startErr := cmdRunner.Start(); startErr != nil {
+		fmt.Fprintf(os.Stderr, "Error starting command: %v\n", startErr)
+		return 1
 	}
 
-	// Update server properties from environment variables
-	if err := config.UpdateServerProperties(workDir); err != nil {
-		fmt.Fprintf(os.Stderr, "Error updating server properties: %v\n", err)
-		os.Exit(1)
-	}
-
-	// Create command runner
-	cmdRunner := runner.New(*command)
-
-	// Start the command
-	if err := cmdRunner.Start(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error starting command: %v\n", err)
-		os.Exit(1)
-	}
-
-	// Create and start HTTP server
-	srv := server.New(server.ServerConfig{
-		Runner:  cmdRunner,
-		AuthKey: *authKey,
-	})
+	srv := server.New(server.Config{Runner: cmdRunner, AuthKey: *flags.authKey, Logger: logger})
+	serverErrCh := make(chan error, 1)
 	go func() {
-		if err := srv.Start(*listenAddress); err != nil {
-			fmt.Fprintf(os.Stderr, "Error starting web server: %v\n", err)
-			os.Exit(1)
+		if startErr := srv.Start(*flags.listenAddress); startErr != nil {
+			serverErrCh <- fmt.Errorf("error starting web server: %w", startErr)
 		}
 	}()
 
-	// Wait for the command to complete
-	if err := cmdRunner.Wait(); err != nil {
-		fmt.Fprintf(os.Stderr, "Error running command: %v\n", err)
-		os.Exit(1)
+	runnerDoneCh := make(chan error, 1)
+	go func() {
+		runnerDoneCh <- cmdRunner.Wait()
+	}()
+
+	select {
+	case serverErr := <-serverErrCh:
+		fmt.Fprintf(os.Stderr, "%v\n", serverErr)
+		return 1
+	case waitErr := <-runnerDoneCh:
+		if waitErr != nil {
+			fmt.Fprintf(os.Stderr, "Error running command: %v\n", waitErr)
+			return 1
+		}
+		return 0
 	}
+}
+
+func loadFlagsFromEnv(listenAddress, appDir, mcVersion, authKey *string) {
+	if envListenAddress := os.Getenv("LISTEN_ADDRESS"); envListenAddress != "" {
+		*listenAddress = envListenAddress
+	}
+	if envAppDir := os.Getenv("APP_DIR"); envAppDir != "" {
+		*appDir = envAppDir
+	}
+	if envMcVer := os.Getenv("MINECRAFT_VER"); envMcVer != "" {
+		*mcVersion = envMcVer
+	}
+	if envAuthKey := os.Getenv("AUTH_KEY"); envAuthKey != "" {
+		*authKey = envAuthKey
+	}
+}
+
+func eulaAccepted() bool {
+	return os.Getenv("EULA_ACCEPT") == "true"
+}
+
+func resolveWorkDir(appDir string) (string, error) {
+	if appDir != "" {
+		return appDir, nil
+	}
+
+	return os.Getwd()
 }
