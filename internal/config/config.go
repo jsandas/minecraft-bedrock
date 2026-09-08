@@ -2,6 +2,7 @@ package config
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -91,49 +92,60 @@ func updatePropertyLines(lines []string, envVars map[string]string) ([]string, b
 	return updatedLines, updated
 }
 
-func readPropertiesFile(filePath string) (lines []string, err error) {
+func readPropertiesFile(filePath string) ([]string, error) {
 	file, err := os.Open(filePath)
 	if err != nil {
 		return nil, err
 	}
-	defer func() {
-		if closeErr := file.Close(); closeErr != nil && err == nil {
-			err = closeErr
-		}
-	}()
 
+	var lines []string
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		lines = append(lines, scanner.Text())
 	}
 
 	if scanErr := scanner.Err(); scanErr != nil {
+		closeErr := file.Close()
+		if closeErr != nil {
+			return nil, fmt.Errorf("scan error: %w", errors.Join(scanErr, closeErr))
+		}
 		return nil, scanErr
+	}
+
+	if closeErr := file.Close(); closeErr != nil {
+		return nil, closeErr
 	}
 
 	return lines, nil
 }
 
-func writePropertiesFile(filePath string, lines []string) (err error) {
+func writePropertiesFile(filePath string, lines []string) error {
 	file, err := os.Create(filePath)
 	if err != nil {
 		return err
 	}
-	defer func() {
-		if closeErr := file.Close(); closeErr != nil && err == nil {
-			err = closeErr
-		}
-	}()
 
 	writer := bufio.NewWriter(file)
 	for _, line := range lines {
 		if _, err = writer.WriteString(line + "\n"); err != nil {
+			closeErr := file.Close()
+			if closeErr != nil {
+				return fmt.Errorf("write error: %w", errors.Join(err, closeErr))
+			}
 			return err
 		}
 	}
 
 	if err = writer.Flush(); err != nil {
+		closeErr := file.Close()
+		if closeErr != nil {
+			return fmt.Errorf("flush error: %w", errors.Join(err, closeErr))
+		}
 		return err
+	}
+
+	if closeErr := file.Close(); closeErr != nil {
+		return closeErr
 	}
 
 	return nil
