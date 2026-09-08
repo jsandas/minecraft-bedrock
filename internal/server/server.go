@@ -138,17 +138,28 @@ func (s *Server) handleRunnerOutput() {
 		}
 		s.connLock.Unlock()
 
-		// Broadcast to all connections
+		// Broadcast to all connections.
 		s.connLock.RLock()
+		deadConns := make([]*websocket.Conn, 0)
 		for conn := range s.connections {
 			if writeErr := conn.WriteMessage(websocket.TextMessage, []byte(line)); writeErr != nil {
-				if closeErr := conn.Close(); closeErr != nil {
-					slog.Default().Warn("Failed to close dead websocket", "err", closeErr)
-				}
-				delete(s.connections, conn)
+				deadConns = append(deadConns, conn)
 			}
 		}
 		s.connLock.RUnlock()
+
+		if len(deadConns) == 0 {
+			continue
+		}
+
+		s.connLock.Lock()
+		for _, conn := range deadConns {
+			if closeErr := conn.Close(); closeErr != nil {
+				slog.Default().Warn("Failed to close dead websocket", "err", closeErr)
+			}
+			delete(s.connections, conn)
+		}
+		s.connLock.Unlock()
 	}
 }
 
