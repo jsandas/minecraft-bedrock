@@ -11,7 +11,10 @@ import (
 	"strings"
 )
 
-const maxExtractedFileSize = 512 * 1024 * 1024
+const (
+	maxExtractedFileSize = 512 * 1024 * 1024
+	maxDownloadSize      = 512 * 1024 * 1024
+)
 
 // DownloadMinecraftServer downloads and extracts the Minecraft Bedrock server.
 // minecraftVer is the version of the server to download (e.g. "1.20.0.01").
@@ -58,8 +61,21 @@ func downloadServerArchive(tmpFile *os.File, minecraftVer string, baseURL string
 		return "", fmt.Errorf("failed to download server, status code: %d", resp.StatusCode)
 	}
 
-	if _, err = io.Copy(tmpFile, resp.Body); err != nil {
+	if resp.ContentLength > maxDownloadSize {
+		return "", fmt.Errorf("download exceeds maximum allowed size: %d bytes", resp.ContentLength)
+	}
+
+	limitedReader := io.LimitReader(resp.Body, maxDownloadSize+1)
+	written, err := io.Copy(tmpFile, limitedReader)
+	if err != nil {
 		return "", fmt.Errorf("failed to save download: %w", err)
+	}
+	if written > maxDownloadSize {
+		return "", fmt.Errorf("download exceeds maximum allowed size: %d bytes", written)
+	}
+
+	if _, err = tmpFile.Seek(0, io.SeekStart); err != nil {
+		return "", fmt.Errorf("failed to rewind temp file: %w", err)
 	}
 
 	return tmpFile.Name(), nil

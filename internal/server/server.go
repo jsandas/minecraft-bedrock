@@ -4,10 +4,13 @@ import (
 	"html/template"
 	"log/slog"
 	"net/http"
+	"net/url"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/gorilla/websocket"
+
 	"github.com/jsandas/bedrock-server/internal/runner"
 )
 
@@ -22,25 +25,32 @@ const (
 
 // Server handles the HTTP endpoints and web UI.
 type Server struct {
-	runner       *runner.Runner
-	connections  map[*websocket.Conn]bool
-	connLock     sync.RWMutex
-	outputBuffer []string
-	authKey      string // Pre-shared key for authentication
+	runner         *runner.Runner
+	connections    map[*websocket.Conn]bool
+	connLock       sync.RWMutex
+	outputBuffer   []string
+	authKey        string   // Pre-shared key for authentication
+	allowedOrigins []string // Allowed websocket origins.
 }
 
 // Config holds configuration for the server.
 type Config struct {
-	Runner  *runner.Runner
-	AuthKey string
+	Runner       *runner.Runner
+	AuthKey      string
+	AllowedHosts []string
 }
 
 // New creates a new Server instance.
 func New(config Config) *Server {
+	if len(config.AllowedHosts) == 0 {
+		config.AllowedHosts = []string{"localhost", "127.0.0.1", "::1"}
+	}
+
 	srv := &Server{
-		runner:      config.Runner,
-		connections: make(map[*websocket.Conn]bool),
-		authKey:     config.AuthKey,
+		runner:         config.Runner,
+		connections:    make(map[*websocket.Conn]bool),
+		authKey:        config.AuthKey,
+		allowedOrigins: config.AllowedHosts,
 	}
 
 	// Start goroutine to handle runner output
@@ -77,8 +87,8 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	upgrader := websocket.Upgrader{
 		ReadBufferSize:  webSocketBufSize,
 		WriteBufferSize: webSocketBufSize,
-		CheckOrigin: func(_ *http.Request) bool {
-			return true // Allow all origins for now, should be configured in production.
+		CheckOrigin: func(r *http.Request) bool {
+			return isAllowedOrigin(r, s.allowedOriginsList())
 		},
 	}
 
@@ -161,6 +171,38 @@ func (s *Server) handleRunnerOutput() {
 		}
 		s.connLock.Unlock()
 	}
+}
+
+func (s *Server) allowedOriginsList() []string {
+	if len(s.allowedOrigins) == 0 {
+		return []string{"localhost", "127.0.0.1", "::1"}
+	}
+	return s.allowedOrigins
+}
+
+func isAllowedOrigin(r *http.Request, allowedHosts []string) bool {
+	origin := r.Header.Get("Origin")
+	if origin == "" {
+		return true
+	}
+
+	originURL, err := url.Parse(origin)
+	if err != nil {
+		return false
+	}
+
+	host := originURL.Hostname()
+	if host == "" {
+		return false
+	}
+
+	for _, allowedHost := range allowedHosts {
+		if strings.EqualFold(host, allowedHost) {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (s *Server) handleIndex(w http.ResponseWriter, _ *http.Request) {
