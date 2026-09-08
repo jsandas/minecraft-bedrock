@@ -91,7 +91,7 @@ func updatePropertyLines(lines []string, envVars map[string]string) ([]string, b
 	return updatedLines, updated
 }
 
-func readPropertiesFile(filePath string) ([]string, error) {
+func readPropertiesFile(filePath string) (lines []string, err error) {
 	file, err := os.Open(filePath)
 	if err != nil {
 		return nil, err
@@ -102,22 +102,19 @@ func readPropertiesFile(filePath string) ([]string, error) {
 		}
 	}()
 
-	var lines []string
-
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		lines = append(lines, scanner.Text())
 	}
 
-	err = scanner.Err()
-	if err != nil {
-		return nil, err
+	if scanErr := scanner.Err(); scanErr != nil {
+		return nil, scanErr
 	}
 
 	return lines, nil
 }
 
-func writePropertiesFile(filePath string, lines []string) error {
+func writePropertiesFile(filePath string, lines []string) (err error) {
 	file, err := os.Create(filePath)
 	if err != nil {
 		return err
@@ -130,11 +127,14 @@ func writePropertiesFile(filePath string, lines []string) error {
 
 	writer := bufio.NewWriter(file)
 	for _, line := range lines {
-		_, err = writer.WriteString(line + "\n")
-		if err != nil {
+		if _, err = writer.WriteString(line + "\n"); err != nil {
 			return err
 		}
 	}
 
-	return writer.Flush()
+	if err = writer.Flush(); err != nil {
+		return err
+	}
+
+	return nil
 }
