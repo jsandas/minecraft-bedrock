@@ -124,6 +124,10 @@ func extractFile(file *zip.File, destDir string) error {
 }
 
 func sanitizeExtractPath(destDir string, entryName string) (string, error) {
+	if entryName == "" || filepath.IsAbs(entryName) {
+		return "", fmt.Errorf("invalid zip entry path: %s", entryName)
+	}
+
 	cleanDestDir := filepath.Clean(destDir)
 	cleanDestPath := filepath.Clean(filepath.Join(cleanDestDir, entryName))
 	if cleanDestPath == cleanDestDir || !strings.HasPrefix(cleanDestPath, cleanDestDir+string(os.PathSeparator)) {

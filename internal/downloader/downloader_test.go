@@ -119,11 +119,3 @@ func createTestZip(t *testing.T, files map[string][]byte) *bytes.Buffer {
 
 	return buffer
 }
-
-func TestExtractFile(t *testing.T) {
-	t.Parallel()
-
-	// This would test the extractFile function.
-	// Would need to create a zip.File mock and verify extraction.
-	t.Skip("Implementation needed")
-}
