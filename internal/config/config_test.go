@@ -1,6 +1,8 @@
 package config_test
 
 import (
+	"bytes"
+	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -30,7 +32,7 @@ server-portv6=19133
 		"SOME_OTHER_VAR", "should-be-ignored",
 	)
 
-	logger := slog.New(slog.DiscardHandler)
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	if err := configpkg.UpdateServerProperties(tempDir, logger); err != nil {
 		t.Errorf("UpdateServerProperties failed: %v", err)
 	}
@@ -68,7 +70,7 @@ gamemode=survival
 		t.Fatalf("Failed to get original file info: %v", err)
 	}
 
-	logger := slog.New(slog.DiscardHandler)
+	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
 	if updateErr := configpkg.UpdateServerProperties(tempDir, logger); updateErr != nil {
 		t.Errorf("UpdateServerProperties failed: %v", updateErr)
 	}
@@ -82,6 +84,26 @@ gamemode=survival
 	// Check that the file wasn't modified
 	if newInfo.ModTime() != origInfo.ModTime() {
 		t.Error("File was modified when it shouldn't have been")
+	}
+}
+
+func TestUpdateServerPropertiesRedactsValues(t *testing.T) {
+	tempDir := t.TempDir()
+	writePropertiesFile(t, tempDir, "server-password=old-value\n")
+	t.Setenv("CFG_SERVER_PASSWORD", "new-secret-value")
+
+	var logBuf bytes.Buffer
+	logger := slog.New(slog.NewTextHandler(&logBuf, nil))
+	if err := configpkg.UpdateServerProperties(tempDir, logger); err != nil {
+		t.Fatalf("UpdateServerProperties failed: %v", err)
+	}
+
+	logOutput := logBuf.String()
+	if strings.Contains(logOutput, "old-value") || strings.Contains(logOutput, "new-secret-value") {
+		t.Fatalf("log output leaked property values: %s", logOutput)
+	}
+	if !strings.Contains(logOutput, "key=server-password") {
+		t.Fatalf("log output did not include the property key: %s", logOutput)
 	}
 }
 

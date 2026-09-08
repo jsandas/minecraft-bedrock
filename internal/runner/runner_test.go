@@ -266,3 +266,26 @@ func TestRunner_MultipleWriters(t *testing.T) {
 		t.Errorf("Expected %d unique writes, found %d", expectedWrites, len(writesFound))
 	}
 }
+
+func TestRunner_WriteInputAfterCloseDoesNotPanic(t *testing.T) {
+	t.Parallel()
+
+	scriptPath := createEchoScript(t)
+	r := runnerpkg.New(scriptPath)
+	if err := r.Start(); err != nil {
+		t.Fatalf("Failed to start runner: %v", err)
+	}
+
+	r.Close()
+	if err := r.Wait(); err != nil {
+		t.Fatalf("Process failed: %v", err)
+	}
+
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			t.Fatalf("WriteInput panicked after Close: %v", recovered)
+		}
+	}()
+
+	r.WriteInput("ignored")
+}

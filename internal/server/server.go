@@ -2,6 +2,7 @@ package server
 
 import (
 	"html/template"
+	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -25,39 +26,39 @@ const (
 
 // Server handles the HTTP endpoints and web UI.
 type Server struct {
-	runner         *runner.Runner
-	connections    map[*websocket.Conn]bool
-	connLock       sync.RWMutex
-	outputBuffer   []string
-	authKey        string   // Pre-shared key for authentication
-	allowedOrigins []string // Allowed websocket origins.
-	logger         *slog.Logger
+	runner             *runner.Runner
+	connections        map[*websocket.Conn]bool
+	connLock           sync.RWMutex
+	outputBuffer       []string
+	authKey            string   // Pre-shared key for authentication
+	allowedOriginHosts []string // Allowed websocket origin hosts.
+	logger             *slog.Logger
 }
 
 // Config holds configuration for the server.
 type Config struct {
-	Runner       *runner.Runner
-	AuthKey      string
-	AllowedHosts []string
-	Logger       *slog.Logger
+	Runner             *runner.Runner
+	AuthKey            string
+	AllowedOriginHosts []string
+	Logger             *slog.Logger
 }
 
 // New creates a new Server instance.
 func New(config Config) *Server {
-	if len(config.AllowedHosts) == 0 {
-		config.AllowedHosts = []string{"localhost", "127.0.0.1", "::1"}
+	if len(config.AllowedOriginHosts) == 0 {
+		config.AllowedOriginHosts = []string{"localhost", "127.0.0.1", "::1"}
 	}
 
 	if config.Logger == nil {
-		config.Logger = slog.New(slog.DiscardHandler)
+		config.Logger = slog.New(slog.NewTextHandler(io.Discard, nil))
 	}
 
 	srv := &Server{
-		runner:         config.Runner,
-		connections:    make(map[*websocket.Conn]bool),
-		authKey:        config.AuthKey,
-		allowedOrigins: config.AllowedHosts,
-		logger:         config.Logger,
+		runner:             config.Runner,
+		connections:        make(map[*websocket.Conn]bool),
+		authKey:            config.AuthKey,
+		allowedOriginHosts: config.AllowedOriginHosts,
+		logger:             config.Logger,
 	}
 
 	// Start goroutine to handle runner output
@@ -95,7 +96,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		ReadBufferSize:  webSocketBufSize,
 		WriteBufferSize: webSocketBufSize,
 		CheckOrigin: func(r *http.Request) bool {
-			return isAllowedOrigin(r, s.allowedOriginsList())
+			return isAllowedOrigin(r, s.allowedOriginHostsList())
 		},
 	}
 
@@ -157,13 +158,18 @@ func (s *Server) handleRunnerOutput() {
 
 		// Broadcast to all connections.
 		s.connLock.RLock()
-		deadConns := make([]*websocket.Conn, 0)
+		connections := make([]*websocket.Conn, 0, len(s.connections))
 		for conn := range s.connections {
+			connections = append(connections, conn)
+		}
+		s.connLock.RUnlock()
+
+		deadConns := make([]*websocket.Conn, 0)
+		for _, conn := range connections {
 			if writeErr := conn.WriteMessage(websocket.TextMessage, []byte(line)); writeErr != nil {
 				deadConns = append(deadConns, conn)
 			}
 		}
-		s.connLock.RUnlock()
 
 		if len(deadConns) == 0 {
 			continue
@@ -180,14 +186,14 @@ func (s *Server) handleRunnerOutput() {
 	}
 }
 
-func (s *Server) allowedOriginsList() []string {
-	if len(s.allowedOrigins) == 0 {
+func (s *Server) allowedOriginHostsList() []string {
+	if len(s.allowedOriginHosts) == 0 {
 		return []string{"localhost", "127.0.0.1", "::1"}
 	}
-	return s.allowedOrigins
+	return s.allowedOriginHosts
 }
 
-func isAllowedOrigin(r *http.Request, allowedHosts []string) bool {
+func isAllowedOrigin(r *http.Request, allowedOriginHosts []string) bool {
 	origin := r.Header.Get("Origin")
 	if origin == "" {
 		return true
@@ -203,7 +209,7 @@ func isAllowedOrigin(r *http.Request, allowedHosts []string) bool {
 		return false
 	}
 
-	for _, allowedHost := range allowedHosts {
+	for _, allowedHost := range allowedOriginHosts {
 		if strings.EqualFold(host, allowedHost) {
 			return true
 		}

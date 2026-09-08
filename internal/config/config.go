@@ -87,7 +87,7 @@ func updatePropertyLines(lines []string, envVars map[string]string, logger *slog
 		updatedLines[i] = fmt.Sprintf("%s=%s", key, newValue)
 		updated = true
 		if logger != nil {
-			logger.Info("Updating property", "key", key, "from", currentValue, "to", newValue)
+			logger.Info("Updating property", "key", key)
 		}
 	}
 

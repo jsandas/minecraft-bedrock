@@ -1,4 +1,4 @@
-package downloader_test
+package downloader
 
 import (
 	"archive/zip"
@@ -8,8 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
-
-	downloaderpkg "github.com/jsandas/bedrock-server/internal/downloader"
 )
 
 func TestDownloadMinecraftServer(t *testing.T) {
@@ -57,7 +55,7 @@ func TestDownloadMinecraftServer(t *testing.T) {
 	testVer := "1.20.0.01"
 
 	// Run the downloader with our test server.
-	err := downloaderpkg.DownloadMinecraftServer(testVer, tempDir, ts.URL)
+	err := DownloadMinecraftServer(testVer, tempDir, ts.URL)
 	if err != nil {
 		t.Fatalf("DownloadMinecraftServer failed: %v", err)
 	}

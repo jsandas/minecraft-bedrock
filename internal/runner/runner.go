@@ -20,6 +20,8 @@ type Runner struct {
 	stdin      chan string
 	outputChan chan string   // Channel for streaming output
 	done       chan struct{} // Channel to signal when the command is done
+	stdinMu    sync.Mutex
+	closed     bool
 	stdinOnce  sync.Once
 }
 
@@ -114,12 +116,22 @@ func (r *Runner) Start() error {
 // Close shuts down stdin for the running command.
 func (r *Runner) Close() {
 	r.stdinOnce.Do(func() {
+		r.stdinMu.Lock()
+		r.closed = true
 		close(r.stdin)
+		r.stdinMu.Unlock()
 	})
 }
 
 // WriteInput sends input to the running command.
 func (r *Runner) WriteInput(input string) {
+	r.stdinMu.Lock()
+	defer r.stdinMu.Unlock()
+
+	if r.closed {
+		return
+	}
+
 	r.stdin <- input
 }
 

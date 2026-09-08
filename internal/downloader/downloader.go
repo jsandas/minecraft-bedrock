@@ -15,6 +15,7 @@ const (
 	maxExtractedFileSize = 512 * 1024 * 1024
 	maxDownloadSize      = 512 * 1024 * 1024
 	safeFileMode         = 0o640
+	safeDirMode          = 0o750
 	executableFileMode   = 0o750
 )
 
@@ -113,7 +114,7 @@ func extractFile(file *zip.File, destDir string) error {
 	}
 
 	if file.FileInfo().IsDir() {
-		return os.MkdirAll(cleanDestPath, file.Mode())
+		return os.MkdirAll(cleanDestPath, safeDirMode)
 	}
 
 	if err = os.MkdirAll(filepath.Dir(cleanDestPath), 0o750); err != nil {
@@ -130,13 +131,21 @@ func sanitizeExtractPath(destDir string, entryName string) (string, error) {
 
 	cleanDestDir := filepath.Clean(destDir)
 	cleanDestPath := filepath.Clean(filepath.Join(cleanDestDir, entryName))
-	if cleanDestPath == cleanDestDir || !strings.HasPrefix(cleanDestPath, cleanDestDir+string(os.PathSeparator)) {
+	relPath, err := filepath.Rel(cleanDestDir, cleanDestPath)
+	if err != nil {
+		return "", fmt.Errorf("invalid zip entry path: %s", entryName)
+	}
+	if relPath == "." || relPath == "" || relPath == ".." || strings.HasPrefix(relPath, ".."+string(os.PathSeparator)) || filepath.IsAbs(relPath) {
 		return "", fmt.Errorf("invalid zip entry path: %s", entryName)
 	}
 	return cleanDestPath, nil
 }
 
 func copyZipEntry(file *zip.File, destPath string) error {
+	return copyZipEntryWithLimit(file, destPath, maxExtractedFileSize)
+}
+
+func copyZipEntryWithLimit(file *zip.File, destPath string, maxSize int64) error {
 	src, err := file.Open()
 	if err != nil {
 		return err
@@ -154,12 +163,12 @@ func copyZipEntry(file *zip.File, destPath string) error {
 	}
 	defer dest.Close()
 
-	limitedReader := io.LimitReader(src, maxExtractedFileSize+1)
+	limitedReader := io.LimitReader(src, maxSize+1)
 	written, err := io.Copy(dest, limitedReader)
 	if err != nil {
 		return err
 	}
-	if written > maxExtractedFileSize {
+	if written > maxSize {
 		return fmt.Errorf("extracted file exceeds maximum allowed size: %s", file.Name)
 	}
 
