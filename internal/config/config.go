@@ -14,7 +14,7 @@ const envKeyParts = 2
 
 // UpdateServerProperties reads environment variables prefixed with CFG_ and updates
 // the server.properties file accordingly.
-func UpdateServerProperties(appDir string) error {
+func UpdateServerProperties(appDir string, logger *slog.Logger) error {
 	propsFile := filepath.Join(appDir, "server.properties")
 	envVars := collectEnvironmentConfigVars()
 	if len(envVars) == 0 {
@@ -26,7 +26,7 @@ func UpdateServerProperties(appDir string) error {
 		return fmt.Errorf("error reading properties file: %w", err)
 	}
 
-	updatedLines, changed := updatePropertyLines(lines, envVars)
+	updatedLines, changed := updatePropertyLines(lines, envVars, logger)
 	if !changed {
 		return nil
 	}
@@ -58,7 +58,7 @@ func collectEnvironmentConfigVars() map[string]string {
 	return envVars
 }
 
-func updatePropertyLines(lines []string, envVars map[string]string) ([]string, bool) {
+func updatePropertyLines(lines []string, envVars map[string]string, logger *slog.Logger) ([]string, bool) {
 	updatedLines := append([]string(nil), lines...)
 	updated := false
 
@@ -86,7 +86,9 @@ func updatePropertyLines(lines []string, envVars map[string]string) ([]string, b
 
 		updatedLines[i] = fmt.Sprintf("%s=%s", key, newValue)
 		updated = true
-		slog.Default().Info("Updating property", "key", key, "from", currentValue, "to", newValue)
+		if logger != nil {
+			logger.Info("Updating property", "key", key, "from", currentValue, "to", newValue)
+		}
 	}
 
 	return updatedLines, updated

@@ -31,6 +31,7 @@ type Server struct {
 	outputBuffer   []string
 	authKey        string   // Pre-shared key for authentication
 	allowedOrigins []string // Allowed websocket origins.
+	logger         *slog.Logger
 }
 
 // Config holds configuration for the server.
@@ -38,6 +39,7 @@ type Config struct {
 	Runner       *runner.Runner
 	AuthKey      string
 	AllowedHosts []string
+	Logger       *slog.Logger
 }
 
 // New creates a new Server instance.
@@ -46,11 +48,16 @@ func New(config Config) *Server {
 		config.AllowedHosts = []string{"localhost", "127.0.0.1", "::1"}
 	}
 
+	if config.Logger == nil {
+		config.Logger = slog.New(slog.DiscardHandler)
+	}
+
 	srv := &Server{
 		runner:         config.Runner,
 		connections:    make(map[*websocket.Conn]bool),
 		authKey:        config.AuthKey,
 		allowedOrigins: config.AllowedHosts,
+		logger:         config.Logger,
 	}
 
 	// Start goroutine to handle runner output
@@ -79,7 +86,7 @@ func (s *Server) Start(addr string) error {
 		IdleTimeout:       idleTimeout,
 	}
 
-	slog.Default().Info("Web server started", "addr", addr)
+	s.logger.Info("Web server started", "addr", addr)
 	return server.ListenAndServe()
 }
 
@@ -94,7 +101,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		slog.Default().WarnContext(r.Context(), "Error upgrading to WebSocket", "err", err)
+		s.logger.WarnContext(r.Context(), "Error upgrading to WebSocket", "err", err)
 		return
 	}
 	defer conn.Close()
@@ -165,7 +172,7 @@ func (s *Server) handleRunnerOutput() {
 		s.connLock.Lock()
 		for _, conn := range deadConns {
 			if closeErr := conn.Close(); closeErr != nil {
-				slog.Default().Warn("Failed to close dead websocket", "err", closeErr)
+				s.logger.Warn("Failed to close dead websocket", "err", closeErr)
 			}
 			delete(s.connections, conn)
 		}
