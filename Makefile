@@ -8,7 +8,7 @@ build:
 	go build -o minecraft-bedrock-wrapper ./cmd/minecraft-bedrock-wrapper
 
 # Run all tests and quality checks
-test: quality test-integration
+test: quality test-unit
 
 # Run unit tests only
 test-unit:

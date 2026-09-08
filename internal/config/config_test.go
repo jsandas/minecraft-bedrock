@@ -1,18 +1,18 @@
-package config
+package config_test
 
 import (
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	configpkg "github.com/jsandas/bedrock-server/internal/config"
 )
 
+//nolint:paralleltest // t.Setenv cannot be used with t.Parallel().
 func TestUpdateServerProperties(t *testing.T) {
-	// Create a temporary directory for testing
 	tempDir := t.TempDir()
-
-	// Create a test server.properties file
-	propsContent := `# Minecraft server properties
+	propsFile := writePropertiesFile(t, tempDir, `# Minecraft server properties
 server-name=Dedicated Server
 gamemode=survival
 difficulty=normal
@@ -20,89 +20,54 @@ allow-cheats=false
 max-players=10
 server-port=19132
 server-portv6=19133
-`
-	propsFile := filepath.Join(tempDir, "server.properties")
-	if err := os.WriteFile(propsFile, []byte(propsContent), 0644); err != nil {
-		t.Fatalf("Failed to create test properties file: %v", err)
-	}
+`)
 
-	// Set test environment variables
-	os.Setenv("CFG_SERVER_NAME", "Test Server")
-	os.Setenv("CFG_GAMEMODE", "creative")
-	os.Setenv("CFG_MAX_PLAYERS", "20")
-	os.Setenv("SOME_OTHER_VAR", "should-be-ignored")
+	setEnvMultiple(t,
+		"CFG_SERVER_NAME", "Test Server",
+		"CFG_GAMEMODE", "creative",
+		"CFG_MAX_PLAYERS", "20",
+		"SOME_OTHER_VAR", "should-be-ignored",
+	)
 
-	// Ensure environment variables are cleaned up after test
-	t.Cleanup(func() {
-		os.Unsetenv("CFG_SERVER_NAME")
-		os.Unsetenv("CFG_GAMEMODE")
-		os.Unsetenv("CFG_MAX_PLAYERS")
-		os.Unsetenv("SOME_OTHER_VAR")
-	})
-
-	// Run the update
-	if err := UpdateServerProperties(tempDir); err != nil {
+	if err := configpkg.UpdateServerProperties(tempDir); err != nil {
 		t.Errorf("UpdateServerProperties failed: %v", err)
 	}
 
-	// Read the updated file
 	content, err := os.ReadFile(propsFile)
 	if err != nil {
 		t.Fatalf("Failed to read updated properties file: %v", err)
 	}
 
-	// Check if the changes were applied correctly
 	updatedContent := string(content)
-	expectedValues := map[string]string{
-		"server-name=Test Server": "",
-		"gamemode=creative":       "",
-		"max-players=20":          "",
-	}
-
-	for expected := range expectedValues {
-		if !contains(updatedContent, expected) {
-			t.Errorf("Expected to find '%s' in properties file", expected)
-		}
-	}
-
-	// Check that unchanged properties remain
-	unchangedValues := map[string]string{
-		"difficulty=normal":   "",
-		"allow-cheats=false":  "",
-		"server-port=19132":   "",
-		"server-portv6=19133": "",
-	}
-
-	for unchanged := range unchangedValues {
-		if !contains(updatedContent, unchanged) {
-			t.Errorf("Expected unchanged value '%s' to remain in properties file", unchanged)
-		}
-	}
+	assertContainsAll(t, updatedContent,
+		"server-name=Test Server",
+		"gamemode=creative",
+		"max-players=20",
+	)
+	assertContainsAll(t, updatedContent,
+		"difficulty=normal",
+		"allow-cheats=false",
+		"server-port=19132",
+		"server-portv6=19133",
+	)
 }
 
 func TestUpdateServerPropertiesNoChanges(t *testing.T) {
-	// Create a temporary directory for testing
-	tempDir := t.TempDir()
+	t.Parallel()
 
-	// Create a test server.properties file
-	propsContent := `# Minecraft server properties
+	tempDir := t.TempDir()
+	propsFile := writePropertiesFile(t, tempDir, `# Minecraft server properties
 server-name=Dedicated Server
 gamemode=survival
-`
-	propsFile := filepath.Join(tempDir, "server.properties")
-	if err := os.WriteFile(propsFile, []byte(propsContent), 0644); err != nil {
-		t.Fatalf("Failed to create test properties file: %v", err)
-	}
+`)
 
-	// Get original file info
 	origInfo, err := os.Stat(propsFile)
 	if err != nil {
 		t.Fatalf("Failed to get original file info: %v", err)
 	}
 
-	// Run the update with no relevant environment variables
-	if err := UpdateServerProperties(tempDir); err != nil {
-		t.Errorf("UpdateServerProperties failed: %v", err)
+	if updateErr := configpkg.UpdateServerProperties(tempDir); updateErr != nil {
+		t.Errorf("UpdateServerProperties failed: %v", updateErr)
 	}
 
 	// Get new file info
@@ -117,6 +82,28 @@ gamemode=survival
 	}
 }
 
-func contains(content, substr string) bool {
-	return strings.Contains(content, substr)
+func setEnvMultiple(t *testing.T, pairs ...string) {
+	t.Helper()
+	for i := 0; i < len(pairs); i += 2 {
+		key, value := pairs[i], pairs[i+1]
+		t.Setenv(key, value)
+	}
+}
+
+func writePropertiesFile(t *testing.T, dir string, content string) string {
+	t.Helper()
+	propsFile := filepath.Join(dir, "server.properties")
+	if err := os.WriteFile(propsFile, []byte(content), 0o644); err != nil {
+		t.Fatalf("Failed to create test properties file: %v", err)
+	}
+	return propsFile
+}
+
+func assertContainsAll(t *testing.T, content string, expected ...string) {
+	t.Helper()
+	for _, item := range expected {
+		if !strings.Contains(content, item) {
+			t.Errorf("Expected to find '%s' in properties file", item)
+		}
+	}
 }

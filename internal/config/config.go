@@ -3,80 +3,92 @@ package config
 import (
 	"bufio"
 	"fmt"
+	"log/slog"
 	"os"
 	"path/filepath"
 	"strings"
 )
 
+const envKeyParts = 2
+
 // UpdateServerProperties reads environment variables prefixed with CFG_ and updates
-// the server.properties file accordingly
+// the server.properties file accordingly.
 func UpdateServerProperties(appDir string) error {
 	propsFile := filepath.Join(appDir, "server.properties")
+	envVars := collectEnvironmentConfigVars()
+	if len(envVars) == 0 {
+		return nil
+	}
 
-	// Get all relevant environment variables first
+	lines, err := readPropertiesFile(propsFile)
+	if err != nil {
+		return fmt.Errorf("error reading properties file: %w", err)
+	}
+
+	updatedLines, changed := updatePropertyLines(lines, envVars)
+	if !changed {
+		return nil
+	}
+
+	if writeErr := writePropertiesFile(propsFile, updatedLines); writeErr != nil {
+		return fmt.Errorf("error writing properties file: %w", writeErr)
+	}
+
+	return nil
+}
+
+func collectEnvironmentConfigVars() map[string]string {
 	envVars := make(map[string]string)
 	for _, env := range os.Environ() {
 		if !strings.HasPrefix(env, "CFG_") {
 			continue
 		}
 
-		parts := strings.SplitN(env, "=", 2)
-		if len(parts) != 2 {
+		parts := strings.SplitN(env, "=", envKeyParts)
+		if len(parts) != envKeyParts {
 			continue
 		}
 
-		// Remove CFG_ prefix and convert _ to -
 		key := strings.ToLower(strings.ReplaceAll(strings.TrimPrefix(parts[0], "CFG_"), "_", "-"))
 		value := parts[1]
 		envVars[key] = value
 	}
 
-	// Don't even open the file if there are no variables to process
-	if len(envVars) == 0 {
-		return nil
-	}
+	return envVars
+}
 
-	// Read the current server.properties file
-	lines, err := readPropertiesFile(propsFile)
-	if err != nil {
-		return fmt.Errorf("error reading properties file: %v", err)
-	}
-
-	// Update the properties
+func updatePropertyLines(lines []string, envVars map[string]string) ([]string, bool) {
+	updatedLines := append([]string(nil), lines...)
 	updated := false
-	newLines := make([]string, len(lines))
-	copy(newLines, lines)
 
-	for i, line := range newLines {
+	for i, line := range updatedLines {
 		line = strings.TrimSpace(line)
 		if line == "" || strings.HasPrefix(line, "#") {
 			continue
 		}
 
-		parts := strings.SplitN(line, "=", 2)
-		if len(parts) != 2 {
+		parts := strings.SplitN(line, "=", envKeyParts)
+		if len(parts) != envKeyParts {
 			continue
 		}
 
 		key := strings.TrimSpace(parts[0])
-		if newValue, exists := envVars[key]; exists {
-			currentValue := strings.TrimSpace(parts[1])
-			if currentValue != newValue {
-				newLines[i] = fmt.Sprintf("%s=%s", key, newValue)
-				updated = true
-				fmt.Printf("Updating %s from %s to %s\n", key, currentValue, newValue)
-			}
+		newValue, exists := envVars[key]
+		if !exists {
+			continue
 		}
+
+		currentValue := strings.TrimSpace(parts[1])
+		if currentValue == newValue {
+			continue
+		}
+
+		updatedLines[i] = fmt.Sprintf("%s=%s", key, newValue)
+		updated = true
+		slog.Default().Info("Updating property", "key", key, "from", currentValue, "to", newValue)
 	}
 
-	// Only write the file if we found actual changes
-	if updated {
-		if err := writePropertiesFile(propsFile, newLines); err != nil {
-			return fmt.Errorf("error writing properties file: %v", err)
-		}
-	}
-
-	return nil
+	return updatedLines, updated
 }
 
 func readPropertiesFile(filePath string) ([]string, error) {
@@ -84,15 +96,21 @@ func readPropertiesFile(filePath string) ([]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil && err == nil {
+			err = closeErr
+		}
+	}()
 
 	var lines []string
+
 	scanner := bufio.NewScanner(file)
 	for scanner.Scan() {
 		lines = append(lines, scanner.Text())
 	}
 
-	if err := scanner.Err(); err != nil {
+	err = scanner.Err()
+	if err != nil {
 		return nil, err
 	}
 
@@ -104,11 +122,16 @@ func writePropertiesFile(filePath string, lines []string) error {
 	if err != nil {
 		return err
 	}
-	defer file.Close()
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil && err == nil {
+			err = closeErr
+		}
+	}()
 
 	writer := bufio.NewWriter(file)
 	for _, line := range lines {
-		if _, err := writer.WriteString(line + "\n"); err != nil {
+		_, err = writer.WriteString(line + "\n")
+		if err != nil {
 			return err
 		}
 	}

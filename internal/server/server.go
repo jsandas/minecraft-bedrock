@@ -1,24 +1,26 @@
 package server
 
 import (
-	"fmt"
 	"html/template"
+	"log/slog"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/jsandas/bedrock-server/internal/runner"
 )
 
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-	CheckOrigin: func(r *http.Request) bool {
-		return true // Allow all origins for now, should be configured in production
-	},
-}
+const (
+	readHeaderTimeout = 5 * time.Second
+	readTimeout       = 10 * time.Second
+	writeTimeout      = 10 * time.Second
+	idleTimeout       = 15 * time.Second
+	webSocketBufSize  = 1024
+	outputLimit       = 1000
+)
 
-// Server handles the HTTP endpoints and web UI
+// Server handles the HTTP endpoints and web UI.
 type Server struct {
 	runner       *runner.Runner
 	connections  map[*websocket.Conn]bool
@@ -27,14 +29,14 @@ type Server struct {
 	authKey      string // Pre-shared key for authentication
 }
 
-// ServerConfig holds configuration for the server
-type ServerConfig struct {
+// Config holds configuration for the server.
+type Config struct {
 	Runner  *runner.Runner
 	AuthKey string
 }
 
-// New creates a new Server instance
-func New(config ServerConfig) *Server {
+// New creates a new Server instance.
+func New(config Config) *Server {
 	srv := &Server{
 		runner:      config.Runner,
 		connections: make(map[*websocket.Conn]bool),
@@ -47,25 +49,42 @@ func New(config ServerConfig) *Server {
 	return srv
 }
 
-// Start begins the HTTP server
+// Start begins the HTTP server.
 func (s *Server) Start(addr string) error {
-	// Create a new ServeMux for our routes
+	// Create a new ServeMux for our routes.
 	mux := http.NewServeMux()
 
-	// Index page doesn't require auth
+	// Index page doesn't require auth.
 	mux.HandleFunc("/", s.handleIndex)
 
-	// Protected routes with auth middleware
+	// Protected routes with auth middleware.
 	mux.HandleFunc("/ws", s.authMiddleware(s.handleWebSocket))
 
-	fmt.Printf("Web server started at http://%s\n", addr)
-	return http.ListenAndServe(addr, mux)
+	server := &http.Server{
+		Addr:              addr,
+		Handler:           mux,
+		ReadHeaderTimeout: readHeaderTimeout,
+		ReadTimeout:       readTimeout,
+		WriteTimeout:      writeTimeout,
+		IdleTimeout:       idleTimeout,
+	}
+
+	slog.Default().Info("Web server started", "addr", addr)
+	return server.ListenAndServe()
 }
 
 func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
+	upgrader := websocket.Upgrader{
+		ReadBufferSize:  webSocketBufSize,
+		WriteBufferSize: webSocketBufSize,
+		CheckOrigin: func(_ *http.Request) bool {
+			return true // Allow all origins for now, should be configured in production.
+		},
+	}
+
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		fmt.Printf("Error upgrading to WebSocket: %v\n", err)
+		slog.Default().WarnContext(r.Context(), "Error upgrading to WebSocket", "err", err)
 		return
 	}
 	defer conn.Close()
@@ -85,8 +104,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	// Send initial buffer
 	s.connLock.RLock()
 	for _, line := range s.outputBuffer {
-		err := conn.WriteMessage(websocket.TextMessage, []byte(line))
-		if err != nil {
+		if writeErr := conn.WriteMessage(websocket.TextMessage, []byte(line)); writeErr != nil {
 			s.connLock.RUnlock()
 			return
 		}
@@ -95,14 +113,14 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 
 	// Handle incoming messages (stdin)
 	for {
-		_, message, err := conn.ReadMessage()
-		if err != nil {
+		_, message, readErr := conn.ReadMessage()
+		if readErr != nil {
 			break
 		}
 
-		// Check if this is the authentication message
+		// Check if this is the authentication message.
 		if len(message) > 0 && message[0] == '{' {
-			continue // Skip the auth message as it's already handled by the middleware
+			continue // Skip the auth message as it's already handled by the middleware.
 		}
 
 		s.runner.WriteInput(string(message))
@@ -115,17 +133,18 @@ func (s *Server) handleRunnerOutput() {
 		s.connLock.Lock()
 		s.outputBuffer = append(s.outputBuffer, line)
 		// Keep buffer size reasonable
-		if len(s.outputBuffer) > 1000 {
-			s.outputBuffer = s.outputBuffer[len(s.outputBuffer)-1000:]
+		if len(s.outputBuffer) > outputLimit {
+			s.outputBuffer = s.outputBuffer[len(s.outputBuffer)-outputLimit:]
 		}
 		s.connLock.Unlock()
 
 		// Broadcast to all connections
 		s.connLock.RLock()
 		for conn := range s.connections {
-			err := conn.WriteMessage(websocket.TextMessage, []byte(line))
-			if err != nil {
-				conn.Close()
+			if writeErr := conn.WriteMessage(websocket.TextMessage, []byte(line)); writeErr != nil {
+				if closeErr := conn.Close(); closeErr != nil {
+					slog.Default().Warn("Failed to close dead websocket", "err", closeErr)
+				}
 				delete(s.connections, conn)
 			}
 		}
@@ -133,9 +152,11 @@ func (s *Server) handleRunnerOutput() {
 	}
 }
 
-func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
+func (s *Server) handleIndex(w http.ResponseWriter, _ *http.Request) {
 	tmpl := template.Must(template.New("index").Parse(htmlTemplate))
-	tmpl.Execute(w, nil)
+	if err := tmpl.Execute(w, nil); err != nil {
+		http.Error(w, "failed to render page", http.StatusInternalServerError)
+	}
 }
 
 const htmlTemplate = `
@@ -238,13 +259,17 @@ const htmlTemplate = `
                 if (event.code === 1008) {
                     localStorage.removeItem('authKey'); // Clear invalid key
                     const output = document.getElementById('output');
-                    output.innerHTML += '<div class="disconnected">Authentication failed. Please refresh the page to try again.</div>';
+                    output.innerHTML +=
+                        '<div class="disconnected">Authentication failed. ' +
+                        'Please refresh the page to try again.</div>';
                 } else if (reconnectAttempts < maxReconnectAttempts) {
                     reconnectAttempts++;
                     setTimeout(connect, 1000 * reconnectAttempts);
                 } else {
                     const output = document.getElementById('output');
-                    output.innerHTML += '<div class="disconnected">Connection lost. Please refresh the page to reconnect.</div>';
+                    output.innerHTML +=
+                        '<div class="disconnected">Connection lost. ' +
+                        'Please refresh the page to reconnect.</div>';
                 }
             };
 
