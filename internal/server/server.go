@@ -111,15 +111,15 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		s.connLock.Unlock()
 	}()
 
-	// Send initial buffer
+	// Send initial buffer without holding the mutex during network I/O.
 	s.connLock.RLock()
-	for _, line := range s.outputBuffer {
+	initialOutput := append([]string(nil), s.outputBuffer...)
+	s.connLock.RUnlock()
+	for _, line := range initialOutput {
 		if writeErr := conn.WriteMessage(websocket.TextMessage, []byte(line)); writeErr != nil {
-			s.connLock.RUnlock()
 			return
 		}
 	}
-	s.connLock.RUnlock()
 
 	// Handle incoming messages (stdin)
 	for {
