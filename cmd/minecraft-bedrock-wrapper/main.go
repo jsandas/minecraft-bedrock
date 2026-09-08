@@ -93,19 +93,29 @@ func run(args []string) int {
 		Runner:  cmdRunner,
 		AuthKey: *authKey,
 	})
+	serverErrCh := make(chan error, 1)
 	go func() {
 		if startErr := srv.Start(*listenAddress); startErr != nil {
-			fmt.Fprintf(os.Stderr, "Error starting web server: %v\n", startErr)
-			os.Exit(1)
+			serverErrCh <- fmt.Errorf("error starting web server: %w", startErr)
 		}
 	}()
 
-	if waitErr := cmdRunner.Wait(); waitErr != nil {
-		fmt.Fprintf(os.Stderr, "Error running command: %v\n", waitErr)
-		return 1
-	}
+	runnerDoneCh := make(chan error, 1)
+	go func() {
+		runnerDoneCh <- cmdRunner.Wait()
+	}()
 
-	return 0
+	select {
+	case serverErr := <-serverErrCh:
+		fmt.Fprintf(os.Stderr, "%v\n", serverErr)
+		return 1
+	case waitErr := <-runnerDoneCh:
+		if waitErr != nil {
+			fmt.Fprintf(os.Stderr, "Error running command: %v\n", waitErr)
+			return 1
+		}
+		return 0
+	}
 }
 
 func loadFlagsFromEnv(listenAddress, appDir, mcVersion, authKey *string) {
