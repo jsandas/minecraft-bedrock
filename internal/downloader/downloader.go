@@ -14,6 +14,8 @@ import (
 const (
 	maxExtractedFileSize = 512 * 1024 * 1024
 	maxDownloadSize      = 512 * 1024 * 1024
+	safeFileMode         = 0o640
+	executableFileMode   = 0o750
 )
 
 // DownloadMinecraftServer downloads and extracts the Minecraft Bedrock server.
@@ -137,7 +139,12 @@ func copyZipEntry(file *zip.File, destPath string) error {
 	}
 	defer src.Close()
 
-	dest, err := os.OpenFile(destPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, file.Mode())
+	mode := os.FileMode(safeFileMode)
+	if file.FileInfo().Mode()&0o111 != 0 {
+		mode = os.FileMode(executableFileMode)
+	}
+
+	dest, err := os.OpenFile(destPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, mode)
 	if err != nil {
 		return err
 	}
