@@ -2,62 +2,71 @@ package runner
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
 	"sync"
 )
 
-// Runner manages the execution of a command and its I/O
+const (
+	outputBufferSize = 100
+	scannerCount     = 2
+)
+
+// Runner manages the execution of a command and its I/O.
 type Runner struct {
 	cmd        *exec.Cmd
 	stdin      chan string
 	outputChan chan string   // Channel for streaming output
 	done       chan struct{} // Channel to signal when the command is done
+	stdinMu    sync.Mutex
+	closed     bool
+	stdinOnce  sync.Once
 }
 
-// New creates a new Runner instance
+// New creates a new Runner instance.
 func New(command string, args ...string) *Runner {
 	return &Runner{
-		cmd:        exec.Command(command, args...),
+		cmd:        exec.CommandContext(context.Background(), command, args...),
 		stdin:      make(chan string),
-		outputChan: make(chan string, 100), // Buffered channel for output
+		outputChan: make(chan string, outputBufferSize), // Buffered channel for output.
 		done:       make(chan struct{}),
 	}
 }
 
-// Start begins the command execution and sets up I/O handling
+// Start begins the command execution and sets up I/O handling.
 func (r *Runner) Start() error {
-	// Create stdin pipe
-	stdin, err := r.cmd.StdinPipe()
+	// Create stdin pipe.
+	stdinPipe, err := r.cmd.StdinPipe()
 	if err != nil {
-		return fmt.Errorf("error creating stdin pipe: %v", err)
+		return fmt.Errorf("error creating stdin pipe: %w", err)
 	}
 
-	// Create stdout pipe
-	stdout, err := r.cmd.StdoutPipe()
+	// Create stdout pipe.
+	stdoutPipe, err := r.cmd.StdoutPipe()
 	if err != nil {
-		return fmt.Errorf("error creating stdout pipe: %v", err)
+		return fmt.Errorf("error creating stdout pipe: %w", err)
 	}
 
-	// Create stderr pipe
-	stderr, err := r.cmd.StderrPipe()
+	// Create stderr pipe.
+	stderrPipe, err := r.cmd.StderrPipe()
 	if err != nil {
-		return fmt.Errorf("error creating stderr pipe: %v", err)
+		return fmt.Errorf("error creating stderr pipe: %w", err)
 	}
 
-	// Start command
-	if err := r.cmd.Start(); err != nil {
-		return fmt.Errorf("error starting command: %v", err)
+	// Start command.
+	if startErr := r.cmd.Start(); startErr != nil {
+		return fmt.Errorf("error starting command: %w", startErr)
 	}
 
 	// Create scanners for stdout and stderr
-	outScanner := bufio.NewScanner(stdout)
-	errScanner := bufio.NewScanner(stderr)
+	outScanner := bufio.NewScanner(stdoutPipe)
+	errScanner := bufio.NewScanner(stderrPipe)
 
-	// Create a WaitGroup to coordinate the scanner goroutines
+	// Create a WaitGroup to coordinate the scanner goroutines.
 	var scanners sync.WaitGroup
-	scanners.Add(2)
+	scanners.Add(scannerCount)
 
 	// Start goroutine to scan stdout
 	go func() {
@@ -91,12 +100,11 @@ func (r *Runner) Start() error {
 
 	// Start goroutine to forward input to the process
 	go func() {
-		defer stdin.Close() // Ensure stdin is closed when done
+		defer stdinPipe.Close() // Ensure stdin is closed when done.
 		for input := range r.stdin {
-			input = input + "\n"
-			_, err := stdin.Write([]byte(input))
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error writing to stdin: %v\n", err)
+			input += "\n"
+			if _, writeErr := stdinPipe.Write([]byte(input)); writeErr != nil {
+				fmt.Fprintf(os.Stderr, "Error writing to stdin: %v\n", writeErr)
 				return
 			}
 		}
@@ -105,22 +113,39 @@ func (r *Runner) Start() error {
 	return nil
 }
 
-// WriteInput sends input to the running command
+// Close shuts down stdin for the running command.
+func (r *Runner) Close() {
+	r.stdinOnce.Do(func() {
+		r.stdinMu.Lock()
+		r.closed = true
+		close(r.stdin)
+		r.stdinMu.Unlock()
+	})
+}
+
+// WriteInput sends input to the running command.
 func (r *Runner) WriteInput(input string) {
+	r.stdinMu.Lock()
+	defer r.stdinMu.Unlock()
+
+	if r.closed {
+		return
+	}
+
 	r.stdin <- input
 }
 
-// GetOutputChan returns a channel that receives command output in real-time
+// GetOutputChan returns a channel that receives command output in real-time.
 func (r *Runner) GetOutputChan() <-chan string {
 	return r.outputChan
 }
 
-// Done returns a channel that's closed when the command completes
+// Done returns a channel that's closed when the command completes.
 func (r *Runner) Done() <-chan struct{} {
 	return r.done
 }
 
-// Wait waits for the command to complete
+// Wait waits for the command to complete.
 func (r *Runner) Wait() error {
 	return r.cmd.Wait()
 }

@@ -1,44 +1,64 @@
 package server
 
 import (
-	"fmt"
 	"html/template"
+	"io"
+	"log/slog"
 	"net/http"
+	"net/url"
+	"strings"
 	"sync"
+	"time"
 
 	"github.com/gorilla/websocket"
+
 	"github.com/jsandas/bedrock-server/internal/runner"
 )
 
-var upgrader = websocket.Upgrader{
-	ReadBufferSize:  1024,
-	WriteBufferSize: 1024,
-	CheckOrigin: func(r *http.Request) bool {
-		return true // Allow all origins for now, should be configured in production
-	},
-}
+const (
+	readHeaderTimeout = 5 * time.Second
+	readTimeout       = 10 * time.Second
+	writeTimeout      = 10 * time.Second
+	idleTimeout       = 15 * time.Second
+	webSocketBufSize  = 1024
+	outputLimit       = 1000
+)
 
-// Server handles the HTTP endpoints and web UI
+// Server handles the HTTP endpoints and web UI.
 type Server struct {
-	runner       *runner.Runner
-	connections  map[*websocket.Conn]bool
-	connLock     sync.RWMutex
-	outputBuffer []string
-	authKey      string // Pre-shared key for authentication
+	runner             *runner.Runner
+	connections        map[*websocket.Conn]bool
+	connLock           sync.RWMutex
+	outputBuffer       []string
+	authKey            string   // Pre-shared key for authentication
+	allowedOriginHosts []string // Allowed websocket origin hosts.
+	logger             *slog.Logger
 }
 
-// ServerConfig holds configuration for the server
-type ServerConfig struct {
-	Runner  *runner.Runner
-	AuthKey string
+// Config holds configuration for the server.
+type Config struct {
+	Runner             *runner.Runner
+	AuthKey            string
+	AllowedOriginHosts []string
+	Logger             *slog.Logger
 }
 
-// New creates a new Server instance
-func New(config ServerConfig) *Server {
+// New creates a new Server instance.
+func New(config Config) *Server {
+	if len(config.AllowedOriginHosts) == 0 {
+		config.AllowedOriginHosts = []string{"localhost", "127.0.0.1", "::1"}
+	}
+
+	if config.Logger == nil {
+		config.Logger = slog.New(slog.NewTextHandler(io.Discard, nil))
+	}
+
 	srv := &Server{
-		runner:      config.Runner,
-		connections: make(map[*websocket.Conn]bool),
-		authKey:     config.AuthKey,
+		runner:             config.Runner,
+		connections:        make(map[*websocket.Conn]bool),
+		authKey:            config.AuthKey,
+		allowedOriginHosts: config.AllowedOriginHosts,
+		logger:             config.Logger,
 	}
 
 	// Start goroutine to handle runner output
@@ -47,25 +67,42 @@ func New(config ServerConfig) *Server {
 	return srv
 }
 
-// Start begins the HTTP server
+// Start begins the HTTP server.
 func (s *Server) Start(addr string) error {
-	// Create a new ServeMux for our routes
+	// Create a new ServeMux for our routes.
 	mux := http.NewServeMux()
 
-	// Index page doesn't require auth
+	// Index page doesn't require auth.
 	mux.HandleFunc("/", s.handleIndex)
 
-	// Protected routes with auth middleware
+	// Protected routes with auth middleware.
 	mux.HandleFunc("/ws", s.authMiddleware(s.handleWebSocket))
 
-	fmt.Printf("Web server started at http://%s\n", addr)
-	return http.ListenAndServe(addr, mux)
+	server := &http.Server{
+		Addr:              addr,
+		Handler:           mux,
+		ReadHeaderTimeout: readHeaderTimeout,
+		ReadTimeout:       readTimeout,
+		WriteTimeout:      writeTimeout,
+		IdleTimeout:       idleTimeout,
+	}
+
+	s.logger.Info("Web server started", "addr", addr)
+	return server.ListenAndServe()
 }
 
 func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
+	upgrader := websocket.Upgrader{
+		ReadBufferSize:  webSocketBufSize,
+		WriteBufferSize: webSocketBufSize,
+		CheckOrigin: func(r *http.Request) bool {
+			return isAllowedOrigin(r, s.allowedOriginHostsList())
+		},
+	}
+
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		fmt.Printf("Error upgrading to WebSocket: %v\n", err)
+		s.logger.WarnContext(r.Context(), "Error upgrading to WebSocket", "err", err)
 		return
 	}
 	defer conn.Close()
@@ -82,27 +119,26 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		s.connLock.Unlock()
 	}()
 
-	// Send initial buffer
+	// Send initial buffer without holding the mutex during network I/O.
 	s.connLock.RLock()
-	for _, line := range s.outputBuffer {
-		err := conn.WriteMessage(websocket.TextMessage, []byte(line))
-		if err != nil {
-			s.connLock.RUnlock()
+	initialOutput := append([]string(nil), s.outputBuffer...)
+	s.connLock.RUnlock()
+	for _, line := range initialOutput {
+		if writeErr := conn.WriteMessage(websocket.TextMessage, []byte(line)); writeErr != nil {
 			return
 		}
 	}
-	s.connLock.RUnlock()
 
 	// Handle incoming messages (stdin)
 	for {
-		_, message, err := conn.ReadMessage()
-		if err != nil {
+		_, message, readErr := conn.ReadMessage()
+		if readErr != nil {
 			break
 		}
 
-		// Check if this is the authentication message
+		// Check if this is the authentication message.
 		if len(message) > 0 && message[0] == '{' {
-			continue // Skip the auth message as it's already handled by the middleware
+			continue // Skip the auth message as it's already handled by the middleware.
 		}
 
 		s.runner.WriteInput(string(message))
@@ -115,27 +151,78 @@ func (s *Server) handleRunnerOutput() {
 		s.connLock.Lock()
 		s.outputBuffer = append(s.outputBuffer, line)
 		// Keep buffer size reasonable
-		if len(s.outputBuffer) > 1000 {
-			s.outputBuffer = s.outputBuffer[len(s.outputBuffer)-1000:]
+		if len(s.outputBuffer) > outputLimit {
+			s.outputBuffer = s.outputBuffer[len(s.outputBuffer)-outputLimit:]
 		}
 		s.connLock.Unlock()
 
-		// Broadcast to all connections
+		// Broadcast to all connections.
 		s.connLock.RLock()
+		connections := make([]*websocket.Conn, 0, len(s.connections))
 		for conn := range s.connections {
-			err := conn.WriteMessage(websocket.TextMessage, []byte(line))
-			if err != nil {
-				conn.Close()
-				delete(s.connections, conn)
-			}
+			connections = append(connections, conn)
 		}
 		s.connLock.RUnlock()
+
+		deadConns := make([]*websocket.Conn, 0)
+		for _, conn := range connections {
+			if writeErr := conn.WriteMessage(websocket.TextMessage, []byte(line)); writeErr != nil {
+				deadConns = append(deadConns, conn)
+			}
+		}
+
+		if len(deadConns) == 0 {
+			continue
+		}
+
+		s.connLock.Lock()
+		for _, conn := range deadConns {
+			if closeErr := conn.Close(); closeErr != nil {
+				s.logger.Warn("Failed to close dead websocket", "err", closeErr)
+			}
+			delete(s.connections, conn)
+		}
+		s.connLock.Unlock()
 	}
 }
 
-func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
+func (s *Server) allowedOriginHostsList() []string {
+	if len(s.allowedOriginHosts) == 0 {
+		return []string{"localhost", "127.0.0.1", "::1"}
+	}
+	return s.allowedOriginHosts
+}
+
+func isAllowedOrigin(r *http.Request, allowedOriginHosts []string) bool {
+	origin := r.Header.Get("Origin")
+	if origin == "" {
+		return true
+	}
+
+	originURL, err := url.Parse(origin)
+	if err != nil {
+		return false
+	}
+
+	host := originURL.Hostname()
+	if host == "" {
+		return false
+	}
+
+	for _, allowedHost := range allowedOriginHosts {
+		if strings.EqualFold(host, allowedHost) {
+			return true
+		}
+	}
+
+	return false
+}
+
+func (s *Server) handleIndex(w http.ResponseWriter, _ *http.Request) {
 	tmpl := template.Must(template.New("index").Parse(htmlTemplate))
-	tmpl.Execute(w, nil)
+	if err := tmpl.Execute(w, nil); err != nil {
+		http.Error(w, "failed to render page", http.StatusInternalServerError)
+	}
 }
 
 const htmlTemplate = `
@@ -238,13 +325,17 @@ const htmlTemplate = `
                 if (event.code === 1008) {
                     localStorage.removeItem('authKey'); // Clear invalid key
                     const output = document.getElementById('output');
-                    output.innerHTML += '<div class="disconnected">Authentication failed. Please refresh the page to try again.</div>';
+                    output.innerHTML +=
+                        '<div class="disconnected">Authentication failed. ' +
+                        'Please refresh the page to try again.</div>';
                 } else if (reconnectAttempts < maxReconnectAttempts) {
                     reconnectAttempts++;
                     setTimeout(connect, 1000 * reconnectAttempts);
                 } else {
                     const output = document.getElementById('output');
-                    output.innerHTML += '<div class="disconnected">Connection lost. Please refresh the page to reconnect.</div>';
+                    output.innerHTML +=
+                        '<div class="disconnected">Connection lost. ' +
+                        'Please refresh the page to reconnect.</div>';
                 }
             };
 

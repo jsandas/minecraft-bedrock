@@ -11,7 +11,9 @@ import (
 )
 
 func TestDownloadMinecraftServer(t *testing.T) {
-	// Create a temporary directory for testing
+	t.Parallel()
+
+	// Create a temporary directory for testing.
 	tempDir := t.TempDir()
 
 	// Create test files content
@@ -52,7 +54,7 @@ func TestDownloadMinecraftServer(t *testing.T) {
 	// Mock version for testing
 	testVer := "1.20.0.01"
 
-	// Run the downloader with our test server
+	// Run the downloader with our test server.
 	err := DownloadMinecraftServer(testVer, tempDir, ts.URL)
 	if err != nil {
 		t.Fatalf("DownloadMinecraftServer failed: %v", err)
@@ -61,9 +63,9 @@ func TestDownloadMinecraftServer(t *testing.T) {
 	// Verify all files were extracted correctly
 	for filename, expectedContent := range testFiles {
 		path := filepath.Join(tempDir, filename)
-		content, err := os.ReadFile(path)
-		if err != nil {
-			t.Errorf("Failed to read extracted file %s: %v", filename, err)
+		content, readErr := os.ReadFile(path)
+		if readErr != nil {
+			t.Errorf("Failed to read extracted file %s: %v", filename, readErr)
 			continue
 		}
 		if !bytes.Equal(content, expectedContent) {
@@ -81,7 +83,7 @@ func TestDownloadMinecraftServer(t *testing.T) {
 	}
 }
 
-// createTestZip creates a zip file in memory with the given files
+// createTestZip creates a zip file in memory with the given files.
 func createTestZip(t *testing.T, files map[string][]byte) *bytes.Buffer {
 	buffer := new(bytes.Buffer)
 	zipWriter := zip.NewWriter(buffer)
@@ -104,8 +106,8 @@ func createTestZip(t *testing.T, files map[string][]byte) *bytes.Buffer {
 		if err != nil {
 			t.Fatalf("Failed to create file in zip: %v", err)
 		}
-		if _, err := f.Write(content); err != nil {
-			t.Fatalf("Failed to write content to zip: %v", err)
+		if _, writeErr := f.Write(content); writeErr != nil {
+			t.Fatalf("Failed to write content to zip: %v", writeErr)
 		}
 	}
 
@@ -114,10 +116,4 @@ func createTestZip(t *testing.T, files map[string][]byte) *bytes.Buffer {
 	}
 
 	return buffer
-}
-
-func TestExtractFile(t *testing.T) {
-	// This would test the extractFile function
-	// Would need to create a zip.File mock and verify extraction
-	t.Skip("Implementation needed")
 }

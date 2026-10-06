@@ -8,7 +8,7 @@ build:
 	go build -o minecraft-bedrock-wrapper ./cmd/minecraft-bedrock-wrapper
 
 # Run all tests and quality checks
-test: quality test-integration
+test: quality test-unit
 
 # Run unit tests only
 test-unit:
@@ -42,7 +42,7 @@ lint:
 lint-install:
 	@if ! command -v golangci-lint >/dev/null 2>&1; then \
 		echo "Installing golangci-lint..."; \
-		go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest; \
+		go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.13.2; \
 	fi
 	golangci-lint run --timeout=5m
 
