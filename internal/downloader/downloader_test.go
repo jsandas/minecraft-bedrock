@@ -1,4 +1,4 @@
-package downloader
+package downloader_test
 
 import (
 	"archive/zip"
@@ -8,10 +8,14 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+
+	downloader "github.com/jsandas/bedrock-server/internal/downloader"
 )
 
 func TestDownloadMinecraftServer(t *testing.T) {
-	// Create a temporary directory for testing
+	t.Parallel()
+
+	// Create a temporary directory for testing.
 	tempDir := t.TempDir()
 
 	// Create test files content
@@ -52,8 +56,8 @@ func TestDownloadMinecraftServer(t *testing.T) {
 	// Mock version for testing
 	testVer := "1.20.0.01"
 
-	// Run the downloader with our test server
-	err := DownloadMinecraftServer(testVer, tempDir, ts.URL)
+	// Run the downloader with our test server.
+	err := downloader.DownloadMinecraftServer(testVer, tempDir, ts.URL)
 	if err != nil {
 		t.Fatalf("DownloadMinecraftServer failed: %v", err)
 	}
@@ -61,9 +65,9 @@ func TestDownloadMinecraftServer(t *testing.T) {
 	// Verify all files were extracted correctly
 	for filename, expectedContent := range testFiles {
 		path := filepath.Join(tempDir, filename)
-		content, err := os.ReadFile(path)
-		if err != nil {
-			t.Errorf("Failed to read extracted file %s: %v", filename, err)
+		content, readErr := os.ReadFile(path)
+		if readErr != nil {
+			t.Errorf("Failed to read extracted file %s: %v", filename, readErr)
 			continue
 		}
 		if !bytes.Equal(content, expectedContent) {
@@ -81,7 +85,37 @@ func TestDownloadMinecraftServer(t *testing.T) {
 	}
 }
 
-// createTestZip creates a zip file in memory with the given files
+func TestDownloadMinecraftServerUsesSafeDirectoryPermissions(t *testing.T) {
+	t.Parallel()
+
+	tempDir := t.TempDir()
+	files := map[string][]byte{
+		"deeply/nested/file.txt": []byte("test content\n"),
+	}
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/zip")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(createTestZip(t, files).Bytes())
+	}))
+	defer ts.Close()
+
+	if err := downloader.DownloadMinecraftServer("1.20.0.01", tempDir, ts.URL); err != nil {
+		t.Fatalf("DownloadMinecraftServer failed: %v", err)
+	}
+
+	for _, dirPath := range []string{filepath.Join(tempDir, "deeply"), filepath.Join(tempDir, "deeply", "nested")} {
+		info, err := os.Stat(dirPath)
+		if err != nil {
+			t.Fatalf("Failed to stat directory %s: %v", dirPath, err)
+		}
+		if got, want := info.Mode().Perm(), os.FileMode(0o750); got != want {
+			t.Fatalf("directory %s permissions = %#o, want %#o", dirPath, got, want)
+		}
+	}
+}
+
+// createTestZip creates a zip file in memory with the given files.
 func createTestZip(t *testing.T, files map[string][]byte) *bytes.Buffer {
 	buffer := new(bytes.Buffer)
 	zipWriter := zip.NewWriter(buffer)
@@ -104,8 +138,8 @@ func createTestZip(t *testing.T, files map[string][]byte) *bytes.Buffer {
 		if err != nil {
 			t.Fatalf("Failed to create file in zip: %v", err)
 		}
-		if _, err := f.Write(content); err != nil {
-			t.Fatalf("Failed to write content to zip: %v", err)
+		if _, writeErr := f.Write(content); writeErr != nil {
+			t.Fatalf("Failed to write content to zip: %v", writeErr)
 		}
 	}
 
@@ -114,10 +148,4 @@ func createTestZip(t *testing.T, files map[string][]byte) *bytes.Buffer {
 	}
 
 	return buffer
-}
-
-func TestExtractFile(t *testing.T) {
-	// This would test the extractFile function
-	// Would need to create a zip.File mock and verify extraction
-	t.Skip("Implementation needed")
 }
