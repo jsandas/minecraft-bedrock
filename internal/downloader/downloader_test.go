@@ -85,6 +85,36 @@ func TestDownloadMinecraftServer(t *testing.T) {
 	}
 }
 
+func TestDownloadMinecraftServerUsesSafeDirectoryPermissions(t *testing.T) {
+	t.Parallel()
+
+	tempDir := t.TempDir()
+	files := map[string][]byte{
+		"deeply/nested/file.txt": []byte("test content\n"),
+	}
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/zip")
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write(createTestZip(t, files).Bytes())
+	}))
+	defer ts.Close()
+
+	if err := downloader.DownloadMinecraftServer("1.20.0.01", tempDir, ts.URL); err != nil {
+		t.Fatalf("DownloadMinecraftServer failed: %v", err)
+	}
+
+	for _, dirPath := range []string{filepath.Join(tempDir, "deeply"), filepath.Join(tempDir, "deeply", "nested")} {
+		info, err := os.Stat(dirPath)
+		if err != nil {
+			t.Fatalf("Failed to stat directory %s: %v", dirPath, err)
+		}
+		if got, want := info.Mode().Perm(), os.FileMode(0o750); got != want {
+			t.Fatalf("directory %s permissions = %#o, want %#o", dirPath, got, want)
+		}
+	}
+}
+
 // createTestZip creates a zip file in memory with the given files.
 func createTestZip(t *testing.T, files map[string][]byte) *bytes.Buffer {
 	buffer := new(bytes.Buffer)

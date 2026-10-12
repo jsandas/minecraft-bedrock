@@ -39,7 +39,7 @@ func DownloadMinecraftServer(minecraftVer string, appDir string, baseURL string)
 		return fmt.Errorf("failed to close temp file: %w", err)
 	}
 
-	if err = os.MkdirAll(appDir, 0o750); err != nil {
+	if err = ensureSafeDir(appDir); err != nil {
 		return fmt.Errorf("failed to create app directory: %w", err)
 	}
 
@@ -114,14 +114,21 @@ func extractFile(file *zip.File, destDir string) error {
 	}
 
 	if file.FileInfo().IsDir() {
-		return os.MkdirAll(cleanDestPath, safeDirMode)
+		return ensureSafeDir(cleanDestPath)
 	}
 
-	if err = os.MkdirAll(filepath.Dir(cleanDestPath), 0o750); err != nil {
+	if err = ensureSafeDir(filepath.Dir(cleanDestPath)); err != nil {
 		return err
 	}
 
 	return copyZipEntry(file, cleanDestPath)
+}
+
+func ensureSafeDir(path string) error {
+	if err := os.MkdirAll(path, safeDirMode); err != nil {
+		return err
+	}
+	return os.Chmod(path, safeDirMode)
 }
 
 func sanitizeExtractPath(destDir string, entryName string) (string, error) {
