@@ -28,6 +28,7 @@ type Runner struct {
 // New creates a new Runner instance.
 func New(command string, args ...string) *Runner {
 	return &Runner{
+		// #nosec G204 -- command and args are validated by the caller before Runner is created.
 		cmd:        exec.CommandContext(context.Background(), command, args...),
 		stdin:      make(chan string),
 		outputChan: make(chan string, outputBufferSize), // Buffered channel for output.
