@@ -1,4 +1,4 @@
-package runner
+package runner_test
 
 import (
 	"fmt"
@@ -7,9 +7,11 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	runnerpkg "github.com/jsandas/bedrock-server/internal/runner"
 )
 
-// createEchoScript creates a temporary script that echoes input and some test output
+// createEchoScript creates a temporary script that echoes input and some test output.
 func createEchoScript(t *testing.T) string {
 	t.Helper()
 	content := `#!/bin/sh
@@ -38,10 +40,12 @@ fi
 }
 
 func TestRunner_BasicIO(t *testing.T) {
+	t.Parallel()
+
 	scriptPath := createEchoScript(t)
 
-	// Create and start runner
-	r := New(scriptPath)
+	// Create and start runner.
+	r := runnerpkg.New(scriptPath)
 	if err := r.Start(); err != nil {
 		t.Fatalf("Failed to start runner: %v", err)
 	}
@@ -69,13 +73,13 @@ func TestRunner_BasicIO(t *testing.T) {
 
 	// Send inputs
 	for _, input := range testInputs {
-		r.WriteInput(input)
+		writeInput(t, r, input)
 		// Give some time for the process to handle input
 		time.Sleep(100 * time.Millisecond)
 	}
 
-	// Close stdin and wait for process to complete
-	close(r.stdin)
+	// Close stdin and wait for process to complete.
+	r.Close()
 	if err := r.Wait(); err != nil {
 		t.Fatalf("Process failed: %v", err)
 	}
@@ -117,11 +121,20 @@ func TestRunner_BasicIO(t *testing.T) {
 	}
 }
 
+func writeInput(t *testing.T, r *runnerpkg.Runner, input string) {
+	t.Helper()
+	if err := r.WriteInput(input); err != nil {
+		t.Fatalf("WriteInput failed: %v", err)
+	}
+}
+
 func TestRunner_LargeInput(t *testing.T) {
+	t.Parallel()
+
 	scriptPath := createEchoScript(t)
 
-	// Create and start runner
-	r := New(scriptPath)
+	// Create and start runner.
+	r := runnerpkg.New(scriptPath)
 	if err := r.Start(); err != nil {
 		t.Fatalf("Failed to start runner: %v", err)
 	}
@@ -144,19 +157,20 @@ func TestRunner_LargeInput(t *testing.T) {
 		for output := range r.GetOutputChan() {
 			outputs = append(outputs, output)
 			// Check if we found our input
-			if strings.HasPrefix(output, "ECHO: ") {
-				echoed := strings.TrimPrefix(output, "ECHO: ")
-				if echoed == largeInput {
+			if after, ok := strings.CutPrefix(output, "ECHO: "); ok {
+				if after == largeInput {
 					close(found)
 				}
 			}
 		}
 	}()
 
-	r.WriteInput(largeInput)
+	if err := r.WriteInput(largeInput); err != nil {
+		t.Fatalf("WriteInput failed: %v", err)
+	}
 
-	// Close stdin and wait for process to complete
-	close(r.stdin)
+	// Close stdin and wait for process to complete.
+	r.Close()
 	if err := r.Wait(); err != nil {
 		t.Fatalf("Process failed: %v", err)
 	}
@@ -185,10 +199,12 @@ func TestRunner_LargeInput(t *testing.T) {
 }
 
 func TestRunner_MultipleWriters(t *testing.T) {
+	t.Parallel()
+
 	scriptPath := createEchoScript(t)
 
-	// Create and start runner
-	r := New(scriptPath)
+	// Create and start runner.
+	r := runnerpkg.New(scriptPath)
 	if err := r.Start(); err != nil {
 		t.Fatalf("Failed to start runner: %v", err)
 	}
@@ -213,26 +229,29 @@ func TestRunner_MultipleWriters(t *testing.T) {
 	const numWrites = 10
 	writersDone := make(chan bool)
 
-	for i := 0; i < numWriters; i++ {
+	for writerID := range numWriters {
 		go func(id int) {
-			for j := 0; j < numWrites; j++ {
-				input := fmt.Sprintf("writer-%d-write-%d", id, j)
-				r.WriteInput(input)
+			for writeNum := range numWrites {
+				input := fmt.Sprintf("writer-%d-write-%d", id, writeNum)
+				if err := r.WriteInput(input); err != nil {
+					t.Errorf("WriteInput failed: %v", err)
+					return
+				}
 			}
 			writersDone <- true
-		}(i)
+		}(writerID)
 	}
 
-	// Wait for all writers to complete
-	for i := 0; i < numWriters; i++ {
+	// Wait for all writers to complete.
+	for range numWriters {
 		<-writersDone
 	}
 
-	// Give some time for the process to handle all input
+	// Give some time for the process to handle all input.
 	time.Sleep(500 * time.Millisecond)
 
-	// Close stdin and wait for process to complete
-	close(r.stdin)
+	// Close stdin and wait for process to complete.
+	r.Close()
 	if err := r.Wait(); err != nil {
 		t.Fatalf("Process failed: %v", err)
 	}
@@ -257,5 +276,30 @@ func TestRunner_MultipleWriters(t *testing.T) {
 	expectedWrites := numWriters * numWrites
 	if len(writesFound) < expectedWrites {
 		t.Errorf("Expected %d unique writes, found %d", expectedWrites, len(writesFound))
+	}
+}
+
+func TestRunner_WriteInputAfterCloseDoesNotPanic(t *testing.T) {
+	t.Parallel()
+
+	scriptPath := createEchoScript(t)
+	r := runnerpkg.New(scriptPath)
+	if err := r.Start(); err != nil {
+		t.Fatalf("Failed to start runner: %v", err)
+	}
+
+	r.Close()
+	if err := r.Wait(); err != nil {
+		t.Fatalf("Process failed: %v", err)
+	}
+
+	defer func() {
+		if recovered := recover(); recovered != nil {
+			t.Fatalf("WriteInput panicked after Close: %v", recovered)
+		}
+	}()
+
+	if err := r.WriteInput("ignored"); err == nil {
+		t.Fatal("WriteInput should fail after Close")
 	}
 }

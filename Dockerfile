@@ -12,7 +12,6 @@ FROM debian:bookworm
 ARG MC_VER=1.26.52.3
 
 ENV DEBIAN_FRONTEND=noninteractive
-ENV MINECRAFT_VER=${MC_VER}
 ENV APP_DIR=/opt/minecraft
 
 # Minecraft bedrock server requires libcurl
