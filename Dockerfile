@@ -9,9 +9,11 @@ RUN go build -o minecraft-bedrock-wrapper ./cmd/minecraft-bedrock-wrapper
 
 FROM debian:bookworm
 
+ARG MINECRAFT_VER=1.26.52.3
+
 ENV DEBIAN_FRONTEND=noninteractive
-ENV MINECRAFT_VER=1.26.45.1
 ENV APP_DIR=/opt/minecraft
+ENV MINECRAFT_VER=${MINECRAFT_VER}
 
 # Minecraft bedrock server requires libcurl
 RUN apt-get update && apt-get upgrade -y \
