@@ -166,6 +166,7 @@ func copyZipEntryWithLimit(file *zip.File, destPath string, maxSize int64) error
 		mode = os.FileMode(executableFileMode)
 	}
 
+	// #nosec G304 -- destPath is sanitized by sanitizeExtractPath before use.
 	dest, err := os.OpenFile(destPath, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, mode)
 	if err != nil {
 		return err
