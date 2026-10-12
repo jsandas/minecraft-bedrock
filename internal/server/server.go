@@ -2,7 +2,6 @@ package server
 
 import (
 	"html/template"
-	"io"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -50,7 +49,7 @@ func New(config Config) *Server {
 	}
 
 	if config.Logger == nil {
-		config.Logger = slog.New(slog.NewTextHandler(io.Discard, nil))
+		config.Logger = slog.New(slog.DiscardHandler)
 	}
 
 	srv := &Server{

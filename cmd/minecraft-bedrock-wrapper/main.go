@@ -4,7 +4,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io"
 	"log/slog"
 	"os"
 
@@ -19,7 +18,7 @@ func main() {
 }
 
 func run(args []string) int {
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	logger := slog.New(slog.DiscardHandler)
 	flags, err := parseFlags(args)
 	if err != nil {
 		return handleFlagError(err)

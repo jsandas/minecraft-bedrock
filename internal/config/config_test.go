@@ -2,7 +2,6 @@ package config_test
 
 import (
 	"bytes"
-	"io"
 	"log/slog"
 	"os"
 	"path/filepath"
@@ -32,7 +31,7 @@ server-portv6=19133
 		"SOME_OTHER_VAR", "should-be-ignored",
 	)
 
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	logger := slog.New(slog.DiscardHandler)
 	if err := configpkg.UpdateServerProperties(tempDir, logger); err != nil {
 		t.Errorf("UpdateServerProperties failed: %v", err)
 	}
@@ -70,7 +69,7 @@ gamemode=survival
 		t.Fatalf("Failed to get original file info: %v", err)
 	}
 
-	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
+	logger := slog.New(slog.DiscardHandler)
 	if updateErr := configpkg.UpdateServerProperties(tempDir, logger); updateErr != nil {
 		t.Errorf("UpdateServerProperties failed: %v", updateErr)
 	}

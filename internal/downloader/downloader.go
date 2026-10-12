@@ -135,7 +135,9 @@ func sanitizeExtractPath(destDir string, entryName string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("invalid zip entry path: %s", entryName)
 	}
-	if relPath == "." || relPath == "" || relPath == ".." || strings.HasPrefix(relPath, ".."+string(os.PathSeparator)) || filepath.IsAbs(relPath) {
+	if relPath == "." || relPath == "" || relPath == ".." ||
+		strings.HasPrefix(relPath, ".."+string(os.PathSeparator)) ||
+		filepath.IsAbs(relPath) {
 		return "", fmt.Errorf("invalid zip entry path: %s", entryName)
 	}
 	return cleanDestPath, nil
