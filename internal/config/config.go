@@ -15,13 +15,18 @@ const envKeyParts = 2
 // UpdateServerProperties reads environment variables prefixed with CFG_ and updates
 // the server.properties file accordingly.
 func UpdateServerProperties(appDir string, logger *slog.Logger) error {
-	propsFile := filepath.Join(appDir, "server.properties")
+	root, err := os.OpenRoot(filepath.Clean(appDir))
+	if err != nil {
+		return fmt.Errorf("error opening app root: %w", err)
+	}
+	defer root.Close()
+
 	envVars := collectEnvironmentConfigVars()
 	if len(envVars) == 0 {
 		return nil
 	}
 
-	lines, err := readPropertiesFile(propsFile)
+	lines, err := readPropertiesFile(root, "server.properties")
 	if err != nil {
 		return fmt.Errorf("error reading properties file: %w", err)
 	}
@@ -31,7 +36,7 @@ func UpdateServerProperties(appDir string, logger *slog.Logger) error {
 		return nil
 	}
 
-	if writeErr := writePropertiesFile(propsFile, updatedLines); writeErr != nil {
+	if writeErr := writePropertiesFile(root, "server.properties", updatedLines); writeErr != nil {
 		return fmt.Errorf("error writing properties file: %w", writeErr)
 	}
 
@@ -102,8 +107,8 @@ func logPropertyUpdate(logger *slog.Logger, key string) {
 	logger.Info("Updating property", "key", key)
 }
 
-func readPropertiesFile(filePath string) ([]string, error) {
-	file, err := os.Open(filePath)
+func readPropertiesFile(root *os.Root, filePath string) ([]string, error) {
+	file, err := root.Open(filePath)
 	if err != nil {
 		return nil, err
 	}
@@ -129,8 +134,8 @@ func readPropertiesFile(filePath string) ([]string, error) {
 	return lines, nil
 }
 
-func writePropertiesFile(filePath string, lines []string) error {
-	file, err := os.Create(filePath)
+func writePropertiesFile(root *os.Root, filePath string, lines []string) error {
+	file, err := root.Create(filePath)
 	if err != nil {
 		return err
 	}
