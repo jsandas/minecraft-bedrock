@@ -12,7 +12,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - run: |
-          echo "MINECRAFT_VER=$(cat Dockerfile | grep MINECRAFT_VER= | awk -F "=" '{print $2}')" >> $GITHUB_ENV
+          echo "MINECRAFT_VER=$(cat Dockerfile | grep MINECRAFT_VER= | head -n 1 | awk -F "=" '{print $2}')" >> $GITHUB_ENV
 
       - name: Build and run server
         run: |
