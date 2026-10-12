@@ -86,12 +86,20 @@ func updatePropertyLines(lines []string, envVars map[string]string, logger *slog
 
 		updatedLines[i] = fmt.Sprintf("%s=%s", key, newValue)
 		updated = true
-		if logger != nil {
-			logger.Info("Updating property", "key", key)
-		}
+		logPropertyUpdate(logger, key)
 	}
 
 	return updatedLines, updated
+}
+
+func logPropertyUpdate(logger *slog.Logger, key string) {
+	if logger == nil {
+		return
+	}
+
+	// Property values are intentionally never logged. Only the property key is
+	// emitted to avoid leaking secrets such as passwords or tokens.
+	logger.Info("Updating property", "key", key)
 }
 
 func readPropertiesFile(filePath string) ([]string, error) {
