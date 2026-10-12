@@ -117,22 +117,25 @@ func (r *Runner) Start() error {
 func (r *Runner) Close() {
 	r.stdinOnce.Do(func() {
 		r.stdinMu.Lock()
-		r.closed = true
-		close(r.stdin)
+		if !r.closed {
+			r.closed = true
+			close(r.stdin)
+		}
 		r.stdinMu.Unlock()
 	})
 }
 
 // WriteInput sends input to the running command.
-func (r *Runner) WriteInput(input string) {
+func (r *Runner) WriteInput(input string) error {
 	r.stdinMu.Lock()
 	defer r.stdinMu.Unlock()
 
 	if r.closed {
-		return
+		return fmt.Errorf("stdin is closed")
 	}
 
 	r.stdin <- input
+	return nil
 }
 
 // GetOutputChan returns a channel that receives command output in real-time.

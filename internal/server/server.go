@@ -140,7 +140,9 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			continue // Skip the auth message as it's already handled by the middleware.
 		}
 
-		s.runner.WriteInput(string(message))
+		if writeErr := s.runner.WriteInput(string(message)); writeErr != nil {
+			s.logger.WarnContext(r.Context(), "Dropping websocket input", "err", writeErr)
+		}
 	}
 }
 

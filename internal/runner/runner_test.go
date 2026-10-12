@@ -73,7 +73,7 @@ func TestRunner_BasicIO(t *testing.T) {
 
 	// Send inputs
 	for _, input := range testInputs {
-		r.WriteInput(input)
+		writeInput(t, r, input)
 		// Give some time for the process to handle input
 		time.Sleep(100 * time.Millisecond)
 	}
@@ -121,6 +121,13 @@ func TestRunner_BasicIO(t *testing.T) {
 	}
 }
 
+func writeInput(t *testing.T, r *runnerpkg.Runner, input string) {
+	t.Helper()
+	if err := r.WriteInput(input); err != nil {
+		t.Fatalf("WriteInput failed: %v", err)
+	}
+}
+
 func TestRunner_LargeInput(t *testing.T) {
 	t.Parallel()
 
@@ -158,7 +165,9 @@ func TestRunner_LargeInput(t *testing.T) {
 		}
 	}()
 
-	r.WriteInput(largeInput)
+	if err := r.WriteInput(largeInput); err != nil {
+		t.Fatalf("WriteInput failed: %v", err)
+	}
 
 	// Close stdin and wait for process to complete.
 	r.Close()
@@ -224,7 +233,10 @@ func TestRunner_MultipleWriters(t *testing.T) {
 		go func(id int) {
 			for writeNum := range numWrites {
 				input := fmt.Sprintf("writer-%d-write-%d", id, writeNum)
-				r.WriteInput(input)
+				if err := r.WriteInput(input); err != nil {
+					t.Errorf("WriteInput failed: %v", err)
+					return
+				}
 			}
 			writersDone <- true
 		}(writerID)
@@ -287,5 +299,7 @@ func TestRunner_WriteInputAfterCloseDoesNotPanic(t *testing.T) {
 		}
 	}()
 
-	r.WriteInput("ignored")
+	if err := r.WriteInput("ignored"); err == nil {
+		t.Fatal("WriteInput should fail after Close")
+	}
 }
