@@ -13,7 +13,7 @@ ARG MINECRAFT_VER=1.26.52.3
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV APP_DIR=/opt/minecraft
-ENV MINECRAFT_VER=${MINECRAFT_VER}
+ENV MINECRAFT_VER=1.26.52.3
 
 # Minecraft bedrock server requires libcurl
 RUN apt-get update && apt-get upgrade -y \
