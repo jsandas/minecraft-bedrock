@@ -8,7 +8,7 @@ function check_versions() {
         _mc_ver="${BASH_REMATCH[1]}"
     fi
 
-    _image_ver=$(cat Dockerfile | grep MINECRAFT_VER | cut -d "=" -f2)
+    _image_ver=$(cat Dockerfile | grep "ARG MINECRAFT_VER" | cut -d "=" -f2)
     _chart_ver=$(cat helm/minecraft-bedrock/Chart.yaml | grep appVersion | awk '{print $2}' | tr -d '"')
 
     if [[ -z $_mc_ver || -z $_image_ver || -z $_chart_ver ]]; then
@@ -19,7 +19,7 @@ function check_versions() {
 
     if [[ "$_mc_ver" != "$_image_ver" || "$_mc_ver" != "$_chart_ver" ]]; then 
         echo " New version found: $_mc_ver"
-        sed -i 's/MINECRAFT_VER=.*/MINECRAFT_VER='"$_mc_ver"'/g' Dockerfile
+        sed -i 's/ARG MINECRAFT_VER=.*/ARG MINECRAFT_VER='"$_mc_ver"'/g' Dockerfile
         sed -i 's/^appVersion:.*/appVersion: \"'"$_mc_ver"'\"/g' helm/minecraft-bedrock/Chart.yaml
     fi    
 }
