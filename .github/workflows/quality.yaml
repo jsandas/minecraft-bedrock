@@ -22,3 +22,5 @@ jobs:
       security-events: write
     name: Security Checks
     uses: jsandas/github-actions/.github/workflows/golang-security.yml@1074e912fa97bdcbff9036467bb27ddee54fb91a
+    with:
+      go_version_file: "go.mod"
