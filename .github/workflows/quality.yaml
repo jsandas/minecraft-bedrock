@@ -12,11 +12,13 @@ jobs:
     permissions:
       contents: read
     name: Lint Checks
-    uses: jsandas/github-actions/.github/workflows/golang-lint.yml@13150b57906d67e1731f602c2b78a5d13b13b1bc
+    uses: jsandas/github-actions/.github/workflows/golang-lint.yml@1074e912fa97bdcbff9036467bb27ddee54fb91a
+    with:
+      golangci_lint_version: v2.15.0
 
   security:
     permissions:
       contents: read
       security-events: write
     name: Security Checks
-    uses: jsandas/github-actions/.github/workflows/golang-security.yml@13150b57906d67e1731f602c2b78a5d13b13b1bc
+    uses: jsandas/github-actions/.github/workflows/golang-security.yml@1074e912fa97bdcbff9036467bb27ddee54fb91a
