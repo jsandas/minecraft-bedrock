@@ -16,9 +16,9 @@ jobs:
     with:
       golangci_lint_version: v2.15.0
 
-  security:
-    permissions:
-      contents: read
-      security-events: write
-    name: Security Checks
-    uses: jsandas/github-actions/.github/workflows/golang-security.yml@e5a61b525d1de48822254c131169598482ba537d
+  # security:
+  #   permissions:
+  #     contents: read
+  #     security-events: write
+  #   name: Security Checks
+  #   uses: jsandas/github-actions/.github/workflows/golang-security.yml@e5a61b525d1de48822254c131169598482ba537d

@@ -14,6 +14,7 @@ ARG MINECRAFT_VER=1.26.52.3
 ENV DEBIAN_FRONTEND=noninteractive
 ENV APP_DIR=/opt/minecraft
 ENV MINECRAFT_VER=${MINECRAFT_VER}
+ENV PORT=19132
 
 # Minecraft bedrock server requires libcurl
 RUN apt-get update && apt-get upgrade -y \
@@ -33,6 +34,7 @@ RUN chown -R minecraft ${APP_DIR}
 
 USER minecraft
 
+EXPOSE 19132
 EXPOSE 19132/udp
 EXPOSE 19133/udp
 

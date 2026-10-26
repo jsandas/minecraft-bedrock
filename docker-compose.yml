@@ -6,11 +6,13 @@ services:
     environment:
       EULA_ACCEPT: "true"
       AUTH_KEY: "supersecret"
+      PORT: "19132"
       CFG_SERVER_NAME: test_server
       CFG_GAMEMODE: creative
       CFG_LEVEL_NAME: test_server
     ports:
       - '8080:8080'
-      - '19132:19132/udp'
+      - '19132:19132'  # NetherNet signaling & handshake
+      - '19132:19132/udp'  # NetherNet data transport (configured via server-udp-ports)
     # volumes:
     #   - $PWD/worlds:/opt/minecraft/worlds
