@@ -17,9 +17,25 @@ func TestLoadFlagsFromEnvUsesMinecraftVersionEnv(t *testing.T) {
 	appDir := ""
 	mcVersion := ""
 	authKey := ""
+	port := ""
 
-	loadFlagsFromEnv(&listenAddress, &appDir, &mcVersion, &authKey)
+	loadFlagsFromEnv(&listenAddress, &appDir, &mcVersion, &authKey, &port)
 	if mcVersion != "1.2.3.4" {
 		t.Fatalf("expected MINECRAFT_VER to be loaded, got %q", mcVersion)
+	}
+}
+
+func TestLoadFlagsFromEnvUsesPortEnv(t *testing.T) {
+	t.Setenv("PORT", "19140")
+
+	listenAddress := ""
+	appDir := ""
+	mcVersion := ""
+	authKey := ""
+	port := ""
+
+	loadFlagsFromEnv(&listenAddress, &appDir, &mcVersion, &authKey, &port)
+	if port != "19140" {
+		t.Fatalf("expected PORT to be loaded, got %q", port)
 	}
 }

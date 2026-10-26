@@ -52,6 +52,7 @@ server-portv6=19133
 		"allow-cheats=false",
 		"server-port=19132",
 		"server-portv6=19133",
+		"server-udp-ports=19132:19132",
 	)
 }
 
@@ -62,6 +63,8 @@ func TestUpdateServerPropertiesNoChanges(t *testing.T) {
 	propsFile := writePropertiesFile(t, tempDir, `# Minecraft server properties
 server-name=Dedicated Server
 gamemode=survival
+server-port=19132
+server-udp-ports=19132:19132
 `)
 
 	origInfo, err := os.Stat(propsFile)
@@ -104,6 +107,84 @@ func TestUpdateServerPropertiesRedactsValues(t *testing.T) {
 	if !strings.Contains(logOutput, "key=server-password") {
 		t.Fatalf("log output did not include the property key: %s", logOutput)
 	}
+}
+
+func TestUpdateServerProperties_CustomPortEnv(t *testing.T) {
+	tempDir := t.TempDir()
+	propsFile := writePropertiesFile(t, tempDir, `server-name=Dedicated Server
+server-port=19132
+`)
+	t.Setenv("PORT", "19140")
+
+	logger := slog.New(slog.DiscardHandler)
+	if err := configpkg.UpdateServerProperties(tempDir, logger); err != nil {
+		t.Fatalf("UpdateServerProperties failed: %v", err)
+	}
+
+	content, err := os.ReadFile(propsFile)
+	if err != nil {
+		t.Fatalf("Failed to read updated properties file: %v", err)
+	}
+
+	updated := string(content)
+	assertContainsAll(t, updated,
+		"server-port=19140",
+		"server-udp-ports=19140:19140",
+	)
+}
+
+//nolint:paralleltest // t.Setenv cannot be used with t.Parallel().
+func TestUpdateServerProperties_UncommentsServerUdpPorts(t *testing.T) {
+	tempDir := t.TempDir()
+	propsFile := writePropertiesFile(t, tempDir, `server-name=Dedicated Server
+server-port=19132
+# server-udp-ports=
+#   server-udp-ports=49152-49200 (example comment)
+`)
+
+	logger := slog.New(slog.DiscardHandler)
+	if err := configpkg.UpdateServerProperties(tempDir, logger); err != nil {
+		t.Fatalf("UpdateServerProperties failed: %v", err)
+	}
+
+	content, err := os.ReadFile(propsFile)
+	if err != nil {
+		t.Fatalf("Failed to read updated properties file: %v", err)
+	}
+
+	updated := string(content)
+	assertContainsAll(t, updated,
+		"server-udp-ports=19132:19132",
+		"#   server-udp-ports=49152-49200 (example comment)",
+	)
+	if strings.Contains(updated, "# server-udp-ports=") {
+		t.Error("Placeholder # server-udp-ports= was not uncommented")
+	}
+}
+
+func TestUpdateServerProperties_CustomUdpPortsOverridesDefault(t *testing.T) {
+	tempDir := t.TempDir()
+	propsFile := writePropertiesFile(t, tempDir, `server-port=19132
+# server-udp-ports=
+`)
+	t.Setenv("PORT", "19135")
+	t.Setenv("CFG_SERVER_UDP_PORTS", "19135:32000")
+
+	logger := slog.New(slog.DiscardHandler)
+	if err := configpkg.UpdateServerProperties(tempDir, logger); err != nil {
+		t.Fatalf("UpdateServerProperties failed: %v", err)
+	}
+
+	content, err := os.ReadFile(propsFile)
+	if err != nil {
+		t.Fatalf("Failed to read updated properties file: %v", err)
+	}
+
+	updated := string(content)
+	assertContainsAll(t, updated,
+		"server-port=19135",
+		"server-udp-ports=19135:32000",
+	)
 }
 
 func setEnvMultiple(t *testing.T, pairs ...string) {

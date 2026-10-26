@@ -24,7 +24,7 @@ func run(args []string) int {
 		return handleFlagError(err)
 	}
 
-	if err = validateRuntimeConfig(flags.authKey); err != nil {
+	if err = validateRuntimeConfig(flags.authKey, flags.port); err != nil {
 		fmt.Fprintln(os.Stderr, err.Error())
 		return 1
 	}
@@ -55,8 +55,9 @@ func parseFlags(args []string) (cliFlags, error) {
 		"",
 		"pre-shared key for authentication (recommended to use AUTH_KEY env var instead)",
 	)
+	flags.port = fs.String("port", "", "Minecraft server port (defaults to PORT env var or 19132)")
 
-	loadFlagsFromEnv(flags.listenAddress, flags.appDir, flags.mcVersion, flags.authKey)
+	loadFlagsFromEnv(flags.listenAddress, flags.appDir, flags.mcVersion, flags.authKey, flags.port)
 	if err := fs.Parse(args); err != nil {
 		return cliFlags{}, err
 	}
@@ -69,6 +70,7 @@ type cliFlags struct {
 	appDir        *string
 	mcVersion     *string
 	authKey       *string
+	port          *string
 }
 
 func handleFlagError(err error) int {
@@ -79,11 +81,16 @@ func handleFlagError(err error) int {
 	return 1
 }
 
-func validateRuntimeConfig(authKey *string) error {
+func validateRuntimeConfig(authKey, port *string) error {
 	if *authKey == "" {
 		return fmt.Errorf(
 			"error: authentication key is required. Set it using the AUTH_KEY environment variable or --auth-key flag",
 		)
+	}
+	if *port != "" {
+		if err := os.Setenv("PORT", *port); err != nil {
+			return fmt.Errorf("error setting PORT: %w", err)
+		}
 	}
 	if err := os.Setenv("LD_LIBRARY_PATH", "."); err != nil {
 		return fmt.Errorf("error setting LD_LIBRARY_PATH: %w", err)
@@ -142,7 +149,7 @@ func runServer(flags cliFlags, logger *slog.Logger) int {
 	}
 }
 
-func loadFlagsFromEnv(listenAddress, appDir, mcVersion, authKey *string) {
+func loadFlagsFromEnv(listenAddress, appDir, mcVersion, authKey, port *string) {
 	if envListenAddress := os.Getenv("LISTEN_ADDRESS"); envListenAddress != "" {
 		*listenAddress = envListenAddress
 	}
@@ -154,6 +161,9 @@ func loadFlagsFromEnv(listenAddress, appDir, mcVersion, authKey *string) {
 	}
 	if envAuthKey := os.Getenv("AUTH_KEY"); envAuthKey != "" {
 		*authKey = envAuthKey
+	}
+	if envPort := os.Getenv("PORT"); envPort != "" {
+		*port = envPort
 	}
 }
 

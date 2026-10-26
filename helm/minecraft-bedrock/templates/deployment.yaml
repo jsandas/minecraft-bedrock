@@ -43,6 +43,8 @@ spec:
           env:
             - name: EULA_ACCEPT
               value: {{ .Values.minecraft.env.EULA_ACCEPT | quote }}
+            - name: PORT
+              value: {{ .Values.service.port | quote }}
             - name: CFG_SERVER_PORT
               value: {{ .Values.service.port | quote }}
             {{- range $k, $v := .Values.minecraft.config }}
@@ -53,6 +55,9 @@ spec:
             - name: minecraft-udp
               containerPort: {{ .Values.service.port }}
               protocol: UDP
+            - name: minecraft-tcp
+              containerPort: {{ .Values.service.port }}
+              protocol: TCP
           {{- with .Values.livenessProbe }}
           livenessProbe:
             {{- toYaml . | nindent 12 }}
