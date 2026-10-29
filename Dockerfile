@@ -9,7 +9,7 @@ RUN go build -o minecraft-bedrock-wrapper ./cmd/minecraft-bedrock-wrapper
 
 FROM debian:bookworm
 
-ARG MINECRAFT_VER=1.26.52.3
+ARG MINECRAFT_VER=1.26.61.1
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV APP_DIR=/opt/minecraft
