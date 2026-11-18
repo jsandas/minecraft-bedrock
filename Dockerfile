@@ -1,24 +1,26 @@
-FROM golang:1.27 AS builder
+FROM debian:bookworm AS builder
 
-WORKDIR /app
+ENV WRAPPER_VERSION=0.9.1
 
-COPY . .
+RUN apt-get update && apt-get install -y curl \
+    && curl -fssL -O https://github.com/jsandas/minecraft-bedrock-wrapper/releases/download/v${WRAPPER_VERSION}/minecraft-bedrock-wrapper_${WRAPPER_VERSION}_linux_amd64.tar.gz
 
-RUN go build -o minecraft-bedrock-wrapper ./cmd/minecraft-bedrock-wrapper
+RUN tar -xzf minecraft-bedrock-wrapper_${WRAPPER_VERSION}_linux_amd64.tar.gz \
+    && rm minecraft-bedrock-wrapper_${WRAPPER_VERSION}_linux_amd64.tar.gz
 
 
 FROM debian:bookworm
 
-ARG MINECRAFT_VER=1.26.61.1
+ARG MINECRAFT_VERSION=1.26.61.1
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV APP_DIR=/opt/minecraft
-ENV MINECRAFT_VER=${MINECRAFT_VER}
+ENV MINECRAFT_VERSION=${MINECRAFT_VERSION}
 ENV PORT=19132
 
 # Minecraft bedrock server requires libcurl
 RUN apt-get update && apt-get upgrade -y \
-    && apt-get install -y curl \
+    && apt-get install -y ca-certificates \
     && apt-get autoremove -y \
     && rm -rf /var/lib/apt/lists/*
 
@@ -27,7 +29,7 @@ RUN useradd -m -d ${APP_DIR} -s /bin/bash minecraft \
 
 WORKDIR ${APP_DIR}
 
-COPY --from=builder /app/minecraft-bedrock-wrapper ${APP_DIR}/minecraft-bedrock-wrapper
+COPY --from=builder /minecraft-bedrock-wrapper /minecraft-bedrock-wrapper
 COPY --from=itzg/mc-monitor /mc-monitor /usr/local/bin/mc-monitor
 
 RUN chown -R minecraft ${APP_DIR}
@@ -37,5 +39,6 @@ USER minecraft
 EXPOSE 19132
 EXPOSE 19132/udp
 EXPOSE 19133/udp
+EXPOSE 7551/udp
 
-ENTRYPOINT ["/opt/minecraft/minecraft-bedrock-wrapper"]
+ENTRYPOINT ["/minecraft-bedrock-wrapper"]
