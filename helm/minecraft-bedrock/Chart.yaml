@@ -2,5 +2,5 @@ apiVersion: v2
 name: minecraft-bedrock
 description: Helm chart for running minecraft bedrock edition server
 type: application
-version: 0.1.3
+version: 0.1.4
 appVersion: "1.26.65.1"
