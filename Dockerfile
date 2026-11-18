@@ -11,7 +11,7 @@ RUN tar -xzf minecraft-bedrock-wrapper_${WRAPPER_VERSION}_linux_amd64.tar.gz \
 
 FROM debian:bookworm
 
-ARG MINECRAFT_VERSION=1.26.61.1
+ARG MINECRAFT_VERSION=1.26.65.1
 
 ENV DEBIAN_FRONTEND=noninteractive
 ENV APP_DIR=/opt/minecraft
