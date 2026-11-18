@@ -41,10 +41,10 @@ spec:
           tty: true
           stdin: true
           env:
+            - name: AUTH_KEY
+              value: {{ .Values.minecraft.env.authKey | quote }}
             - name: EULA_ACCEPT
               value: {{ .Values.minecraft.env.eulaAccept | quote }}
-            - name: MINECRAFT_VERSION
-              value: {{ .Values.minecraft.env.minecraftVersion | quote }}
             - name: PORT
               value: {{ .Values.service.port | quote }}
             - name: CFG_SERVER_PORT

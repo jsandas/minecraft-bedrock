@@ -4,12 +4,12 @@
 
 minecraft:
   env:
+    authKey: ""
     # Must accept the Minecraft EULA and Microsoft Privacy Policy"
     # Links:"
     #   https://www.minecraft.net/en-us/terms"
     #   https://privacy.microsoft.com/en-us/privacystatement"
     eulaAccept: "false"
-    minecraftVersion: ""
   # Config keys match server.properties execept hyphens (-) need to be replaced with underscores (_) 
   # while upper-case is optional for keys. Example: server-name = SERVER_NAME
   # Config values cannot have space as they will not be set properly in the properties file
