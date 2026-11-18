@@ -25,5 +25,12 @@ spec:
       {{- if eq .Values.service.type "NodePort" }}
       nodePort: {{ default "" .Values.service.nodePortTcp | default .Values.service.nodePort }}
       {{- end }}
+    - port: 8080
+      targetPort: web-ui
+      protocol: TCP
+      name: web-ui
+      {{- if eq .Values.service.type "NodePort" }}
+      nodePort: {{ default "" .Values.service.webUINodePort }}
+      {{- end }}
   selector:
     {{- include "minecraft-bedrock.selectorLabels" . | nindent 4 }}

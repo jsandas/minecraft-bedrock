@@ -8,7 +8,8 @@ minecraft:
     # Links:"
     #   https://www.minecraft.net/en-us/terms"
     #   https://privacy.microsoft.com/en-us/privacystatement"
-    EULA_ACCEPT: "false"
+    eulaAccept: "false"
+    minecraftVersion: ""
   # Config keys match server.properties execept hyphens (-) need to be replaced with underscores (_) 
   # while upper-case is optional for keys. Example: server-name = SERVER_NAME
   # Config values cannot have space as they will not be set properly in the properties file
@@ -70,8 +71,6 @@ service:
   # loadBalancerIP:
   # loadBalancerClass:
 
-hostNetwork: false
-
 ## Enable persistence using Persistent Volume Claims
 ## ref: http://kubernetes.io/docs/user-guide/persistent-volumes/
 ##
@@ -109,23 +108,24 @@ resources: {}
 
 # This is to setup the liveness and readiness probes more information can be found here: https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/
 livenessProbe:
-  # exec:
-  #   command:
-  #     - mc-monitor 
-  #     - status-bedrock 
-  #     - --host
-  #     - 127.0.0.1
-  #     - --port
-  #     - "{{ .Values.service.port }}"
+  httpGet:
+    path: /health/live
+    port: 8080
+    scheme: HTTP
+  initialDelaySeconds: 30
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
+
 readinessProbe:
-  # exec:
-  #   command:
-  #     - mc-monitor 
-  #     - status-bedrock 
-  #     - --host
-  #     - 127.0.0.1
-  #     - --port
-  #     - "{{ .Values.service.port }}"
+  httpGet:
+    path: /health/ready
+    port: 8080
+    scheme: HTTP
+  initialDelaySeconds: 60
+  periodSeconds: 10
+  timeoutSeconds: 5
+  failureThreshold: 3
 
 nodeSelector: {}
 
